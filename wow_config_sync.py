@@ -83,6 +83,58 @@ def save_excludes(excludes):
         pass
 
 
+def rounded_rect_points(x1, y1, x2, y2, r):
+    """Puntos para un polígono suavizado (create_polygon smooth=True) que
+    simula un rectángulo de esquinas redondeadas."""
+    return [
+        x1 + r, y1,
+        x2 - r, y1,
+        x2, y1,
+        x2, y1 + r,
+        x2, y2 - r,
+        x2, y2,
+        x2 - r, y2,
+        x1 + r, y2,
+        x1, y2,
+        x1, y2 - r,
+        x1, y1 + r,
+        x1, y1,
+    ]
+
+
+class RoundedPanel(tk.Frame):
+    """Contenedor con borde redondeado dorado dibujado a mano (tkinter no
+    tiene esquinas redondeadas nativas). Agregar contenido a .inner."""
+
+    def __init__(self, parent, radius=14, bg=BG_PANEL, border=GOLD, border_width=2, **kwargs):
+        super().__init__(parent, bg=BG, highlightthickness=0)
+        self.radius = radius
+        self.border = border
+        self.border_width = border_width
+        self.bg_color = bg
+        self.canvas = tk.Canvas(self, bg=BG, highlightthickness=0)
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.inner = ttk.Frame(self.canvas, style="Panel.TFrame", **kwargs)
+        self._win = self.canvas.create_window(6, 6, window=self.inner, anchor="nw")
+        self.inner.bind("<Configure>", self._on_inner_configure)
+
+    def _on_inner_configure(self, _event=None):
+        w = self.inner.winfo_reqwidth() + 12
+        h = self.inner.winfo_reqheight() + 12
+        self.canvas.config(width=w, height=h)
+        self._redraw(w, h)
+
+    def _redraw(self, w, h):
+        self.canvas.delete("border")
+        if w < 10 or h < 10:
+            return
+        pts = rounded_rect_points(2, 2, w - 2, h - 2, self.radius)
+        self.canvas.create_polygon(pts, smooth=True, fill=self.bg_color,
+                                    outline=self.border, width=self.border_width,
+                                    tags="border")
+        self.canvas.tag_lower("border")
+
+
 def log(widget, text):
     widget.insert(tk.END, text + "\n")
     widget.see(tk.END)
@@ -258,18 +310,24 @@ class App(tk.Tk):
         self.option_add("*TCombobox*Listbox.selectForeground", "#1a1a1a")
 
     def _build_header(self):
-        header = ttk.Frame(self, padding=(16, 14, 16, 8))
-        header.pack(fill=tk.X)
-        ttk.Label(header, text="WoW Config Sync", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(header, text="Wrath of the Lich King · cliente 3.3.5a",
-                  style="Subtitle.TLabel").pack(anchor="w")
-        sep = tk.Frame(self, bg=GOLD, height=1)
-        sep.pack(fill=tk.X, padx=16, pady=(4, 0))
+        outer = tk.Frame(self, bg=BG)
+        outer.pack(fill=tk.X, padx=16, pady=(14, 6))
+        panel = RoundedPanel(outer, radius=16, bg=BG_PANEL, border=GOLD, border_width=2)
+        panel.pack(fill=tk.X)
+        head = panel.inner
+        head.configure(padding=(18, 12))
+        ttk.Label(head, text="WoW Config Sync", style="Title.TLabel", background=BG_PANEL).pack(anchor="w")
+        ttk.Label(head, text="Wrath of the Lich King · cliente 3.3.5a",
+                  style="Subtitle.TLabel", background=BG_PANEL).pack(anchor="w")
 
     def _build_wtf_picker(self):
-        top = ttk.Frame(self, padding=16)
-        top.pack(fill=tk.X)
-        ttk.Label(top, text="Carpeta WTF:").pack(side=tk.LEFT)
+        outer = tk.Frame(self, bg=BG)
+        outer.pack(fill=tk.X, padx=16, pady=6)
+        panel = RoundedPanel(outer, radius=14, bg=BG_PANEL, border=GOLD, border_width=2)
+        panel.pack(fill=tk.X)
+        top = panel.inner
+        top.configure(padding=12)
+        ttk.Label(top, text="Carpeta WTF:", background=BG_PANEL).pack(side=tk.LEFT)
         ttk.Entry(top, textvariable=self.wtf_root, width=56).pack(side=tk.LEFT, padx=6)
         ttk.Button(top, text="Buscar...", command=self.browse).pack(side=tk.LEFT)
         ttk.Button(top, text="Cargar", command=self.reload).pack(side=tk.LEFT, padx=6)
@@ -291,9 +349,15 @@ class App(tk.Tk):
                                         bg=BG_FIELD, fg=TEXT, selectbackground=GOLD, selectforeground="#1a1a1a",
                                         highlightbackground=BORDER, highlightcolor=GOLD, relief=tk.FLAT)
         self.acc_dst_list.grid(row=1, column=1, sticky="w", padx=4)
+        acc_sel_btns = ttk.Frame(acc_tab, style="Panel.TFrame")
+        acc_sel_btns.grid(row=1, column=2, sticky="nw", padx=(6, 0))
+        ttk.Button(acc_sel_btns, text="Seleccionar todas",
+                   command=lambda: self._select_all(self.acc_dst_list)).pack(anchor="w", pady=2, fill=tk.X)
+        ttk.Button(acc_sel_btns, text="Deseleccionar todas",
+                   command=lambda: self._select_none(self.acc_dst_list)).pack(anchor="w", pady=2, fill=tk.X)
 
         ttk.Button(acc_tab, text="Copiar a las demás",
-                   command=self.run_account_sync).grid(row=2, column=0, columnspan=2, pady=10, sticky="w")
+                   command=self.run_account_sync).grid(row=2, column=0, columnspan=3, pady=10, sticky="w")
         ttk.Label(acc_tab, text="Copia config-cache.wtf, macros-cache.txt y SavedVariables a nivel cuenta.\n"
                                  "Borra antes los homónimos y cualquier .bak/.old en destino.",
                   style="Dim.TLabel", background=BG_PANEL).grid(row=3, column=0, columnspan=2, sticky="w")
@@ -311,9 +375,15 @@ class App(tk.Tk):
                                          bg=BG_FIELD, fg=TEXT, selectbackground=GOLD, selectforeground="#1a1a1a",
                                          highlightbackground=BORDER, highlightcolor=GOLD, relief=tk.FLAT)
         self.char_dst_list.grid(row=1, column=1, sticky="w", padx=4)
+        char_sel_btns = ttk.Frame(char_tab, style="Panel.TFrame")
+        char_sel_btns.grid(row=1, column=2, sticky="nw", padx=(6, 0))
+        ttk.Button(char_sel_btns, text="Seleccionar todos",
+                   command=lambda: self._select_all(self.char_dst_list)).pack(anchor="w", pady=2, fill=tk.X)
+        ttk.Button(char_sel_btns, text="Deseleccionar todos",
+                   command=lambda: self._select_none(self.char_dst_list)).pack(anchor="w", pady=2, fill=tk.X)
 
         opts = ttk.LabelFrame(char_tab, text="Qué copiar", padding=8)
-        opts.grid(row=2, column=0, columnspan=2, sticky="w", pady=8)
+        opts.grid(row=2, column=0, columnspan=3, sticky="w", pady=8)
         self.opt_vars = {}
         labels = [("config", "Config general (config-cache.wtf)"),
                   ("bindings", "Bindeos (bindings-cache.wtf)"),
@@ -356,11 +426,21 @@ class App(tk.Tk):
 
     def _build_log(self):
         ttk.Label(self, text="Registro:", padding=(16, 4, 16, 0)).pack(anchor="w")
-        self.logw = tk.Text(self, height=13, bg=BG_FIELD, fg=GOLD, insertbackground=GOLD,
-                             relief=tk.FLAT, highlightthickness=1,
-                             highlightbackground=BORDER, highlightcolor=GOLD,
+        outer = tk.Frame(self, bg=BG)
+        outer.pack(fill=tk.BOTH, expand=True, padx=16, pady=(4, 16))
+        border = tk.Frame(outer, bg=GOLD, padx=2, pady=2)
+        border.pack(fill=tk.BOTH, expand=True)
+        self.logw = tk.Text(border, height=13, bg=BG_FIELD, fg=GOLD, insertbackground=GOLD,
+                             relief=tk.FLAT, highlightthickness=0,
                              font=("Consolas", 9))
-        self.logw.pack(fill=tk.BOTH, expand=True, padx=16, pady=(4, 16))
+        self.logw.pack(fill=tk.BOTH, expand=True)
+
+    # -- helpers de selección --------------------------------------------
+    def _select_all(self, listbox):
+        listbox.select_set(0, tk.END)
+
+    def _select_none(self, listbox):
+        listbox.select_clear(0, tk.END)
 
     # -- exclusiones ----------------------------------------------------
     def add_exclude(self):
