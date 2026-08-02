@@ -1,0 +1,29 @@
+name: build-exe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "wow_config_sync.py"
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar pyinstaller
+        run: pip install pyinstaller
+
+      - name: Compilar exe
+        run: pyinstaller --onefile --noconsole wow_config_sync.py
+
+      - name: Subir exe como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wow_config_sync-exe
+          path: dist/wow_config_sync.exe
