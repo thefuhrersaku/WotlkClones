@@ -235,6 +235,7 @@ def main(page: ft.Page):
     page.window.height = 860
     page.window.min_width = 760
     page.window.min_height = 640
+    page.window.maximized = True
     page.padding = 0
 
     settings = load_settings()
@@ -398,11 +399,11 @@ def main(page: ft.Page):
         saved_src = settings["src"].get(f"{kind}_{scope}")
         p["src"].value = saved_src if saved_src in items else (items[0] if items else None)
 
-        p["checks"] = {}
+        p["checks"].clear()
         rows = []
         for name in items:
             cb = ft.Checkbox(label=name, value=False, fill_color=GOLD, check_color="#1a1408",
-                              label_style=ft.TextStyle(color=TEXT, size=12))
+                              label_style=ft.TextStyle(color=TEXT, size=12), on_change=lambda e: None)
             p["checks"][name] = cb
             rows.append(cb)
         p["checklist_col"].controls = rows
