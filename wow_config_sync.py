@@ -525,12 +525,23 @@ def main(page: ft.Page):
     tpl_name_field = ft.TextField(label="Nombre de la plantilla", width=300,
                                    bgcolor=FIELD, color=TEXT, border_color=GOLD_DIM, border_radius=9)
     scope_checks = {}
-    scope_row = ft.Row(wrap=True, spacing=18, run_spacing=4)
-    for key, label in SCOPE_LABELS.items():
-        cb = ft.Checkbox(label=label, value=False, fill_color=GOLD, check_color="#1a1408",
-                          label_style=ft.TextStyle(color=TEXT, size=12))
-        scope_checks[key] = cb
-        scope_row.controls.append(cb)
+    KIND_SHORT = {"addons": "Addons", "configs": "Configs", "bindings": "Bindeos"}
+
+    def make_scope_column(scope, heading):
+        col = ft.Column([ft.Text(heading, color=GOLD, size=12, weight=ft.FontWeight.BOLD)], spacing=4)
+        for kind in ("addons", "configs", "bindings"):
+            key = (kind, scope)
+            cb = ft.Checkbox(label=KIND_SHORT[kind], value=False, fill_color=GOLD, check_color="#1a1408",
+                              label_style=ft.TextStyle(color=TEXT, size=12))
+            scope_checks[key] = cb
+            col.controls.append(cb)
+        return col
+
+    scope_row = ft.Row([
+        make_scope_column("account", "Cuenta"),
+        ft.VerticalDivider(color=GOLD_DIM, width=1),
+        make_scope_column("character", "Personaje"),
+    ], spacing=20)
 
     def collect_current_jobs(selected_scopes):
         jobs = []
@@ -635,19 +646,26 @@ def main(page: ft.Page):
             msg += f' (sin datos, no incluidas: {", ".join(missing)})'
         snack(msg, OK)
 
-    templates_tab_content = ft.Column([
-        panel(ft.Column([
-            ft.Text("Guardar la selección actual como plantilla", color=TEXT, size=14, weight=ft.FontWeight.BOLD),
-            ft.Text("Elegí qué secciones incluir. Solo se guarda el origen/destino de las secciones tildadas acá, "
-                    "las demás quedan afuera aunque tengan algo tildado en su pestaña.",
-                    color=TEXT_DIM, size=11),
-            field_box(scope_row),
-            ft.Row([tpl_name_field, gold_button("Guardar plantilla actual", save_template)]),
-        ], spacing=8)),
-        ft.Container(height=10),
-        ft.Text("Plantillas guardadas", color=GOLD, size=15, weight=ft.FontWeight.BOLD),
-        templates_col,
-    ], spacing=10, scroll=ft.ScrollMode.AUTO)
+    templates_tab_content = ft.Row([
+        ft.Container(
+            content=panel(ft.Column([
+                ft.Text("Guardar la selección actual como plantilla", color=TEXT, size=14, weight=ft.FontWeight.BOLD),
+                ft.Text("Elegí qué secciones incluir. Solo se guarda el origen/destino de las secciones tildadas acá, "
+                        "las demás quedan afuera aunque tengan algo tildado en su pestaña.",
+                        color=TEXT_DIM, size=11),
+                field_box(scope_row),
+                ft.Row([tpl_name_field, gold_button("Guardar plantilla actual", save_template)]),
+            ], spacing=8)),
+            expand=1,
+        ),
+        ft.Container(
+            content=ft.Column([
+                ft.Text("Plantillas guardadas", color=GOLD, size=15, weight=ft.FontWeight.BOLD),
+                templates_col,
+            ], spacing=10, scroll=ft.ScrollMode.AUTO, expand=True),
+            expand=1,
+        ),
+    ], spacing=16, expand=True, vertical_alignment=ft.CrossAxisAlignment.START)
 
     # --------------------------------------------------------------- tabs
     def sub_tabs(kind, has_account, has_character, extra_account=None, extra_character=None, extra_excl=None):
