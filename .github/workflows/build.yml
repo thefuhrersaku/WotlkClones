@@ -17,10 +17,10 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependencias
-        run: pip install pyinstaller customtkinter
+        run: pip install flet flet-cli
 
       - name: Compilar exe
-        run: pyinstaller --onefile --noconsole --collect-data customtkinter wow_config_sync.py
+        run: flet pack wow_config_sync.py --name wow_config_sync
 
       - name: Subir exe como artifact
         uses: actions/upload-artifact@v4
