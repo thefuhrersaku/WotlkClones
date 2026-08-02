@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-WoW Config Sync - 3.3.5a  (interfaz con Flet)
+WOTLK Clones - Config Sync 3.3.5a  (interfaz con Flet)
 
 Copia (nunca linkea) SavedVariables, config-cache.wtf, macros-cache.txt,
 layout-cache.txt, addons.txt y bindings-cache.wtf entre cuentas/personajes.
@@ -239,7 +239,7 @@ JOB_RUNNERS = {
 
 # ======================================================================= UI
 def main(page: ft.Page):
-    page.title = "WoW Config Sync"
+    page.title = "WOTLK Clones"
     page.bgcolor = BG
     page.window.width = 980
     page.window.height = 860
@@ -694,10 +694,10 @@ def main(page: ft.Page):
     bindings_tabs = sub_tabs("bindings", True, True, extra_excl=bindings_excl_note)
 
     main_tabs = make_tabview([
+        ("Plantillas", ft.Container(templates_tab_content, padding=14)),
         ("Addons", addons_tabs),
         ("Configs", configs_tabs),
         ("Bindeos", bindings_tabs),
-        ("Plantillas", ft.Container(templates_tab_content, padding=14)),
     ])
 
     # ------------------------------------------------------------ WTF picker
@@ -738,7 +738,7 @@ def main(page: ft.Page):
 
     # --------------------------------------------------------------- header
     header = panel(ft.Column([
-        ft.Text("❖  WoW Config Sync  ❖", color=GOLD_HI, size=24, weight=ft.FontWeight.BOLD),
+        ft.Text("❖  WOTLK Clones  ❖", color=GOLD_HI, size=24, weight=ft.FontWeight.BOLD),
         ft.Text("Wrath of the Lich King  ·  cliente 3.3.5a", color=TEXT_DIM, size=12, italic=True),
     ], spacing=2), pad=16)
 
