@@ -1,64 +1,51 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-WoW Config Sync - 3.3.5a
-Copia (no linkea) config-cache.wtf, bindings-cache.wtf, macros-cache.txt,
-layout-cache.txt y SavedVariables desde una cuenta/personaje "main" hacia
-otras cuentas/personajes. Antes de copiar, borra en destino los archivos
-con el mismo nombre y cualquier .bak/.old.
+WoW Config Sync - 3.3.5a  (interfaz con Flet)
 
-Estructura esperada (WTF root):
-  WTF/Account/<CUENTA>/config-cache.wtf
-  WTF/Account/<CUENTA>/macros-cache.txt
-  WTF/Account/<CUENTA>/SavedVariables/*.lua
-  WTF/Account/<CUENTA>/<REALM>/<PERSONAJE>/config-cache.wtf
-  WTF/Account/<CUENTA>/<REALM>/<PERSONAJE>/bindings-cache.wtf
-  WTF/Account/<CUENTA>/<REALM>/<PERSONAJE>/macros-cache.txt
-  WTF/Account/<CUENTA>/<REALM>/<PERSONAJE>/layout-cache.txt
-  WTF/Account/<CUENTA>/<REALM>/<PERSONAJE>/addons.txt
-  WTF/Account/<CUENTA>/<REALM>/<PERSONAJE>/SavedVariables/*.lua
+Copia (nunca linkea) SavedVariables, config-cache.wtf, macros-cache.txt,
+layout-cache.txt, addons.txt y bindings-cache.wtf entre cuentas/personajes.
+Antes de copiar cada archivo: borra el homónimo en destino y cualquier
+.bak/.old sueltos en esa carpeta.
 
-Las exclusiones de SavedVariables (addons que NO se copian, ej. ActionBarSaver)
-se guardan en un JSON al lado del script/exe y persisten entre ejecuciones.
-
-Requiere: pip install customtkinter
+Requiere: pip install flet
+Ejecutar: python wow_config_sync.py
+Empaquetar a exe (Windows): pip install flet flet-cli && flet pack wow_config_sync.py --name wow_config_sync
 """
 
 import os
 import sys
 import json
 import shutil
-import tkinter as tk
-from tkinter import filedialog
-import customtkinter as ctk
+import flet as ft
 
-# ---------------------------------------------------------------- paleta --
-BG       = "#0f0d0a"   # fondo ventana
-PANEL    = "#1a1611"   # paneles / tabs
-FIELD    = "#221d16"   # entries, scrollframes
-GOLD     = "#c8a557"   # dorado principal
-GOLD_HI  = "#e8c979"   # dorado hover / texto destacado
-GOLD_DIM = "#8a723f"   # dorado apagado (bordes secundarios)
-TEXT     = "#efe6d3"   # texto principal
-TEXT_DIM = "#a89f8c"   # texto secundario
-DANGER   = "#b0503f"
+# ================================================================== paleta
+BG        = "#090b10"
+PANEL_A   = "#151b28"
+PANEL_B   = "#0d1119"
+FIELD     = "#10151f"
+GOLD      = "#c8a24c"
+GOLD_HI   = "#f2ca77"
+GOLD_DIM  = "#5a4a26"
+ICE       = "#5fb0cf"
+TEXT      = "#eef1f5"
+TEXT_DIM  = "#8b93a3"
+DANGER    = "#c0604c"
+OK        = "#6fae6f"
 
-ctk.set_appearance_mode("dark")
-
-ACCOUNT_LEVEL_FILES = ["config-cache.wtf", "macros-cache.txt"]
-CHARACTER_LEVEL_FILES = {
-    "config":   "config-cache.wtf",
-    "bindings": "bindings-cache.wtf",
-    "macros":   "macros-cache.txt",
-    "layout":   "layout-cache.txt",
-    "addons":   "addons.txt",
+ACCOUNT_CONFIG_FILES = {"config-cache.wtf": "Config general", "macros-cache.txt": "Macros"}
+CHARACTER_CONFIG_FILES = {
+    "config-cache.wtf": "Config general",
+    "macros-cache.txt": "Macros",
+    "layout-cache.txt": "Layout de UI",
+    "addons.txt": "Lista de addons activados",
 }
+BINDINGS_FILE = "bindings-cache.wtf"
 JUNK_SUFFIXES = (".bak", ".old")
-DEFAULT_EXCLUDES = ["ActionBarSaver"]
+DEFAULT_ADDON_EXCLUDES = ["ActionBarSaver"]
 
-
+# ============================================================ persistencia
 def settings_path():
-    """Carpeta del .exe (si está congelado por pyinstaller) o del script."""
     if getattr(sys, "frozen", False):
         base = os.path.dirname(sys.executable)
     else:
@@ -66,38 +53,37 @@ def settings_path():
     return os.path.join(base, "wow_config_sync_settings.json")
 
 
-def load_excludes():
+def load_settings():
     p = settings_path()
+    default = {
+        "wtf_root": "",
+        "src": {},                 # ej: {"addons_account": "RAMIROVELEZ", ...}
+        "addon_excludes": list(DEFAULT_ADDON_EXCLUDES),
+        "config_excludes": [],     # nombres de archivo excluidos (config-cache.wtf, etc.)
+        "templates": [],           # [{"name": ..., "jobs": [...]}]
+    }
     if os.path.isfile(p):
         try:
             with open(p, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            ex = data.get("excludes", [])
-            if isinstance(ex, list):
-                return sorted(set(ex))
+            for k, v in default.items():
+                data.setdefault(k, v)
+            return data
         except (OSError, json.JSONDecodeError):
             pass
-    return sorted(set(DEFAULT_EXCLUDES))
+    return default
 
 
-def save_excludes(excludes):
-    p = settings_path()
+def save_settings(s):
     try:
-        with open(p, "w", encoding="utf-8") as f:
-            json.dump({"excludes": sorted(set(excludes))}, f, ensure_ascii=False, indent=2)
+        with open(settings_path(), "w", encoding="utf-8") as f:
+            json.dump(s, f, ensure_ascii=False, indent=2)
     except OSError:
         pass
 
 
-def log(widget, text):
-    widget.configure(state="normal")
-    widget.insert("end", text + "\n")
-    widget.see("end")
-    widget.configure(state="disabled")
-    widget.update_idletasks()
-
-
-def clean_junk(dst_dir, logw):
+# ================================================================ lógica de copia
+def clean_junk(dst_dir, log_cb):
     if not os.path.isdir(dst_dir):
         return
     for name in os.listdir(dst_dir):
@@ -105,12 +91,12 @@ def clean_junk(dst_dir, logw):
             p = os.path.join(dst_dir, name)
             try:
                 os.remove(p)
-                log(logw, f"  borrado basura: {p}")
+                log_cb(f"  borrado basura: {p}")
             except OSError as e:
-                log(logw, f"  ERROR borrando {p}: {e}")
+                log_cb(f"  ERROR borrando {p}: {e}")
 
 
-def copy_replace(src_file, dst_dir, logw):
+def copy_replace(src_file, dst_dir, log_cb):
     if not os.path.isfile(src_file):
         return
     os.makedirs(dst_dir, exist_ok=True)
@@ -119,39 +105,37 @@ def copy_replace(src_file, dst_dir, logw):
         try:
             os.remove(dst_file)
         except OSError as e:
-            log(logw, f"  ERROR borrando {dst_file}: {e}")
+            log_cb(f"  ERROR borrando {dst_file}: {e}")
             return
     shutil.copy2(src_file, dst_file)
-    log(logw, f"  copiado: {src_file} -> {dst_file}")
+    log_cb(f"  copiado: {src_file} -> {dst_file}")
 
 
 def is_excluded(filename, excludes):
-    base = os.path.splitext(filename)[0]
-    return base in excludes
+    return os.path.splitext(filename)[0] in excludes
 
 
-def copy_savedvariables(src_root, dst_root, excludes, logw):
+def copy_savedvariables(src_root, dst_root, excludes, log_cb):
     src_sv = os.path.join(src_root, "SavedVariables")
     dst_sv = os.path.join(dst_root, "SavedVariables")
     if not os.path.isdir(src_sv):
         return
-    clean_junk(dst_sv, logw)
+    clean_junk(dst_sv, log_cb)
     os.makedirs(dst_sv, exist_ok=True)
     for name in os.listdir(src_sv):
         if name.lower().endswith(JUNK_SUFFIXES):
             continue
         if is_excluded(name, excludes):
-            log(logw, f"  omitido (exclusión): {name}")
+            log_cb(f"  omitido (exclusión): {name}")
             continue
-        copy_replace(os.path.join(src_sv, name), dst_sv, logw)
+        copy_replace(os.path.join(src_sv, name), dst_sv, log_cb)
 
 
 def list_accounts(wtf_root):
     acc_dir = os.path.join(wtf_root, "Account")
     if not os.path.isdir(acc_dir):
         return []
-    return sorted(d for d in os.listdir(acc_dir)
-                  if os.path.isdir(os.path.join(acc_dir, d)))
+    return sorted(d for d in os.listdir(acc_dir) if os.path.isdir(os.path.join(acc_dir, d)))
 
 
 def list_characters(wtf_root):
@@ -170,379 +154,531 @@ def list_characters(wtf_root):
     return sorted(out)
 
 
-def sync_account(wtf_root, src_acc, dst_accs, excludes, logw):
-    src_dir = os.path.join(wtf_root, "Account", src_acc)
-    for dst_acc in dst_accs:
-        dst_dir = os.path.join(wtf_root, "Account", dst_acc)
-        log(logw, f"\n== Cuenta {src_acc} -> {dst_acc} ==")
-        clean_junk(dst_dir, logw)
-        for fname in ACCOUNT_LEVEL_FILES:
-            copy_replace(os.path.join(src_dir, fname), dst_dir, logw)
-        copy_savedvariables(src_dir, dst_dir, excludes, logw)
+def scan_all_addons(wtf_root):
+    """Nombres base (sin .lua) de todos los addons con SavedVariables en todo el WTF."""
+    names = set()
+    acc_dir = os.path.join(wtf_root, "Account")
+    if not os.path.isdir(acc_dir):
+        return []
+    for acc in list_accounts(wtf_root):
+        sv = os.path.join(acc_dir, acc, "SavedVariables")
+        if os.path.isdir(sv):
+            for n in os.listdir(sv):
+                if not n.lower().endswith(JUNK_SUFFIXES):
+                    names.add(os.path.splitext(n)[0])
+    for acc, realm, char, path in list_characters(wtf_root):
+        sv = os.path.join(path, "SavedVariables")
+        if os.path.isdir(sv):
+            for n in os.listdir(sv):
+                if not n.lower().endswith(JUNK_SUFFIXES):
+                    names.add(os.path.splitext(n)[0])
+    return sorted(names)
 
 
-def sync_character(src_path, dst_paths, options, excludes, logw):
+def sync_addons_account(wtf_root, src, dsts, excludes, log_cb):
+    src_dir = os.path.join(wtf_root, "Account", src)
+    for dst in dsts:
+        dst_dir = os.path.join(wtf_root, "Account", dst)
+        log_cb(f"\n== Addons cuenta: {src} -> {dst} ==")
+        copy_savedvariables(src_dir, dst_dir, excludes, log_cb)
+
+
+def sync_addons_character(src_path, dst_paths, excludes, log_cb):
     for dst_path in dst_paths:
-        log(logw, f"\n== Personaje {src_path} -> {dst_path} ==")
-        clean_junk(dst_path, logw)
-        for key, fname in CHARACTER_LEVEL_FILES.items():
-            if options.get(key):
-                copy_replace(os.path.join(src_path, fname), dst_path, logw)
-        if options.get("savedvars"):
-            copy_savedvariables(src_path, dst_path, excludes, logw)
+        log_cb(f"\n== Addons personaje: {src_path} -> {dst_path} ==")
+        copy_savedvariables(src_path, dst_path, excludes, log_cb)
 
 
-# ------------------------------------------------------------------ GUI --
-def gold_button(parent, text, command, small=False, **kw):
-    return ctk.CTkButton(
-        parent, text=text, command=command,
-        fg_color=FIELD, hover_color="#332b1f", text_color=GOLD,
-        border_width=1, border_color=GOLD_DIM,
-        corner_radius=8, font=ctk.CTkFont(family="Georgia", size=12 if small else 13, weight="bold"),
-        **kw,
-    )
+def sync_configs_account(wtf_root, src, dsts, excluded_files, log_cb):
+    src_dir = os.path.join(wtf_root, "Account", src)
+    for dst in dsts:
+        dst_dir = os.path.join(wtf_root, "Account", dst)
+        log_cb(f"\n== Config cuenta: {src} -> {dst} ==")
+        clean_junk(dst_dir, log_cb)
+        for fname in ACCOUNT_CONFIG_FILES:
+            if fname in excluded_files:
+                continue
+            copy_replace(os.path.join(src_dir, fname), dst_dir, log_cb)
 
 
-def title_font(size=13, weight="normal", slant="roman"):
-    return ctk.CTkFont(family="Georgia", size=size, weight=weight, slant=slant)
+def sync_configs_character(src_path, dst_paths, excluded_files, log_cb):
+    for dst_path in dst_paths:
+        log_cb(f"\n== Config personaje: {src_path} -> {dst_path} ==")
+        clean_junk(dst_path, log_cb)
+        for fname in CHARACTER_CONFIG_FILES:
+            if fname in excluded_files:
+                continue
+            copy_replace(os.path.join(src_path, fname), dst_path, log_cb)
 
 
-class CheckList(ctk.CTkScrollableFrame):
-    """Reemplazo de listbox multi-selección: una fila con checkbox por item."""
-
-    def __init__(self, parent, height=180, **kw):
-        super().__init__(parent, fg_color=FIELD, corner_radius=10,
-                          border_width=1, border_color=GOLD_DIM,
-                          height=height, **kw)
-        self._vars = {}
-
-    def set_items(self, items):
-        for w in self.winfo_children():
-            w.destroy()
-        self._vars = {}
-        for name in items:
-            v = ctk.BooleanVar(value=False)
-            cb = ctk.CTkCheckBox(
-                self, text=name, variable=v, text_color=TEXT,
-                fg_color=GOLD, hover_color=GOLD_HI, border_color=GOLD_DIM,
-                checkmark_color="#1a1610", font=title_font(12),
-            )
-            cb.pack(anchor="w", padx=6, pady=3)
-            self._vars[name] = v
-
-    def selected(self):
-        return [name for name, v in self._vars.items() if v.get()]
-
-    def select_all(self):
-        for v in self._vars.values():
-            v.set(True)
-
-    def select_none(self):
-        for v in self._vars.values():
-            v.set(False)
+def sync_bindings_character(src_path, dst_paths, log_cb):
+    for dst_path in dst_paths:
+        log_cb(f"\n== Bindeos: {src_path} -> {dst_path} ==")
+        clean_junk(dst_path, log_cb)
+        copy_replace(os.path.join(src_path, BINDINGS_FILE), dst_path, log_cb)
 
 
-class App(ctk.CTk):
-    def __init__(self):
-        super().__init__()
-        self.title("WoW Config Sync")
-        self.geometry("880x780")
-        self.configure(fg_color=BG)
-        self.excludes = load_excludes()
-        self._char_map = {}
+JOB_RUNNERS = {
+    ("addons", "account"): lambda wtf, src, dsts, s, log: sync_addons_account(wtf, src, dsts, s["addon_excludes"], log),
+    ("addons", "character"): lambda wtf, src, dsts, s, log: sync_addons_character(src, dsts, s["addon_excludes"], log),
+    ("configs", "account"): lambda wtf, src, dsts, s, log: sync_configs_account(wtf, src, dsts, s["config_excludes"], log),
+    ("configs", "character"): lambda wtf, src, dsts, s, log: sync_configs_character(src, dsts, s["config_excludes"], log),
+    ("bindings", "character"): lambda wtf, src, dsts, s, log: sync_bindings_character(src, dsts, log),
+}
 
-        self._build_header()
-        self._build_wtf_picker()
-        self._build_tabs()
-        self._build_log()
 
-    # ---------------------------------------------------------- header --
-    def _build_header(self):
-        panel = ctk.CTkFrame(self, fg_color=PANEL, corner_radius=16,
-                              border_width=2, border_color=GOLD)
-        panel.pack(fill="x", padx=18, pady=(16, 8))
-        inner = ctk.CTkFrame(panel, fg_color="transparent")
-        inner.pack(fill="x", padx=18, pady=14)
-        ctk.CTkLabel(inner, text="WoW Config Sync", text_color=GOLD_HI,
-                     font=title_font(24, "bold")).pack(anchor="w")
-        ctk.CTkLabel(inner, text="Wrath of the Lich King  ·  cliente 3.3.5a",
-                     text_color=TEXT_DIM, font=title_font(12, slant="italic")).pack(anchor="w")
+# ======================================================================= UI
+def main(page: ft.Page):
+    page.title = "WoW Config Sync"
+    page.bgcolor = BG
+    page.window.width = 980
+    page.window.height = 860
+    page.window.min_width = 760
+    page.window.min_height = 640
+    page.padding = 0
 
-    # ------------------------------------------------------- wtf picker --
-    def _build_wtf_picker(self):
-        panel = ctk.CTkFrame(self, fg_color=PANEL, corner_radius=14,
-                              border_width=2, border_color=GOLD)
-        panel.pack(fill="x", padx=18, pady=8)
-        row = ctk.CTkFrame(panel, fg_color="transparent")
-        row.pack(fill="x", padx=14, pady=12)
-        ctk.CTkLabel(row, text="Carpeta WTF:", text_color=TEXT,
-                     font=title_font(13)).pack(side="left")
-        self.wtf_root = ctk.StringVar()
-        ctk.CTkEntry(row, textvariable=self.wtf_root, width=420,
-                     fg_color=FIELD, border_color=GOLD_DIM, text_color=TEXT,
-                     corner_radius=8).pack(side="left", padx=8)
-        gold_button(row, "Buscar...", self.browse).pack(side="left", padx=3)
-        gold_button(row, "Cargar", self.reload).pack(side="left", padx=3)
+    settings = load_settings()
+    state = {
+        "wtf_root": settings["wtf_root"],
+        "accounts": [],
+        "char_map": {},   # "acc / realm / char" -> path
+        "panels": {},      # (kind, scope) -> {"src": Dropdown, "checks": {name: Checkbox}, "column": Column}
+    }
 
-    # ------------------------------------------------------------ tabs --
-    def _build_tabs(self):
-        self.tabs = ctk.CTkTabview(
-            self, fg_color=PANEL, corner_radius=14,
-            border_width=2, border_color=GOLD,
-            segmented_button_fg_color=FIELD,
-            segmented_button_selected_color=GOLD,
-            segmented_button_selected_hover_color=GOLD_HI,
-            segmented_button_unselected_color=PANEL,
-            segmented_button_unselected_hover_color="#2a241a",
-            text_color=TEXT_DIM,
-            text_color_disabled=TEXT_DIM,
-        )
-        self.tabs.pack(fill="both", expand=True, padx=18, pady=8)
-        acc_tab = self.tabs.add("Configuración de cuenta")
-        char_tab = self.tabs.add("Configuración de personaje")
-        exc_tab = self.tabs.add("Exclusiones")
-        self._build_account_tab(acc_tab)
-        self._build_character_tab(char_tab)
-        self._build_exclusions_tab(exc_tab)
+    def log_cb(text):
+        log_view.controls.append(ft.Text(text, color=GOLD_HI, font_family="Consolas", size=12, selectable=True))
+        page.update()
 
-    def _build_account_tab(self, tab):
-        left = ctk.CTkFrame(tab, fg_color="transparent")
-        left.pack(side="left", fill="both", expand=True, padx=(4, 8), pady=8)
-        right = ctk.CTkFrame(tab, fg_color="transparent")
-        right.pack(side="left", fill="y", padx=(0, 4), pady=8)
+    def snack(msg, color=DANGER):
+        page.show_dialog(ft.SnackBar(ft.Text(msg, color=TEXT), bgcolor=color))
 
-        ctk.CTkLabel(left, text="Cuenta origen (main):", text_color=TEXT,
-                     font=title_font(13)).pack(anchor="w")
-        self.acc_src = ctk.StringVar()
-        self.acc_src_box = ctk.CTkComboBox(
-            left, variable=self.acc_src, values=[], state="readonly",
-            fg_color=FIELD, border_color=GOLD_DIM, button_color=GOLD_DIM,
-            button_hover_color=GOLD, dropdown_fg_color=FIELD,
-            text_color=TEXT, corner_radius=8, width=280,
-        )
-        self.acc_src_box.pack(anchor="w", pady=(4, 12))
-
-        ctk.CTkLabel(left, text="Cuentas destino:", text_color=TEXT,
-                     font=title_font(13)).pack(anchor="w")
-        self.acc_dst_list = CheckList(left, height=220)
-        self.acc_dst_list.pack(fill="x", pady=(4, 12))
-
-        gold_button(left, "Copiar a las demás", self.run_account_sync).pack(anchor="w", pady=(0, 10))
-        ctk.CTkLabel(left, text="Copia config-cache.wtf, macros-cache.txt y SavedVariables a nivel cuenta.\n"
-                                 "Borra antes los homónimos y cualquier .bak/.old en destino.",
-                     text_color=TEXT_DIM, font=title_font(11), justify="left").pack(anchor="w")
-
-        gold_button(right, "Seleccionar todas", lambda: self.acc_dst_list.select_all(), small=True).pack(fill="x", pady=3)
-        gold_button(right, "Deseleccionar todas", lambda: self.acc_dst_list.select_none(), small=True).pack(fill="x", pady=3)
-
-    def _build_character_tab(self, tab):
-        left = ctk.CTkFrame(tab, fg_color="transparent")
-        left.pack(side="left", fill="both", expand=True, padx=(4, 8), pady=8)
-        right = ctk.CTkFrame(tab, fg_color="transparent")
-        right.pack(side="left", fill="y", padx=(0, 4), pady=8)
-
-        ctk.CTkLabel(left, text="Personaje origen (main):", text_color=TEXT,
-                     font=title_font(13)).pack(anchor="w")
-        self.char_src = ctk.StringVar()
-        self.char_src_box = ctk.CTkComboBox(
-            left, variable=self.char_src, values=[], state="readonly",
-            fg_color=FIELD, border_color=GOLD_DIM, button_color=GOLD_DIM,
-            button_hover_color=GOLD, dropdown_fg_color=FIELD,
-            text_color=TEXT, corner_radius=8, width=340,
-        )
-        self.char_src_box.pack(anchor="w", pady=(4, 12))
-
-        ctk.CTkLabel(left, text="Personajes destino:", text_color=TEXT,
-                     font=title_font(13)).pack(anchor="w")
-        self.char_dst_list = CheckList(left, height=170)
-        self.char_dst_list.pack(fill="x", pady=(4, 12))
-
-        opts_panel = ctk.CTkFrame(left, fg_color=FIELD, corner_radius=10,
-                                   border_width=1, border_color=GOLD_DIM)
-        opts_panel.pack(fill="x", pady=(0, 12))
-        ctk.CTkLabel(opts_panel, text="Qué copiar", text_color=GOLD,
-                     font=title_font(12, "bold")).pack(anchor="w", padx=10, pady=(8, 2))
-        self.opt_vars = {}
-        labels = [("config", "Config general (config-cache.wtf)"),
-                  ("bindings", "Bindeos (bindings-cache.wtf)"),
-                  ("macros", "Macros (macros-cache.txt)"),
-                  ("layout", "Layout de UI (layout-cache.txt)"),
-                  ("addons", "Lista de addons activados (addons.txt)"),
-                  ("savedvars", "SavedVariables (addons)")]
-        grid = ctk.CTkFrame(opts_panel, fg_color="transparent")
-        grid.pack(fill="x", padx=8, pady=(0, 8))
-        for i, (key, label) in enumerate(labels):
-            v = ctk.BooleanVar(value=True)
-            self.opt_vars[key] = v
-            cb = ctk.CTkCheckBox(grid, text=label, variable=v, text_color=TEXT,
-                                  fg_color=GOLD, hover_color=GOLD_HI, border_color=GOLD_DIM,
-                                  checkmark_color="#1a1610", font=title_font(12))
-            cb.grid(row=i // 2, column=i % 2, sticky="w", padx=6, pady=3)
-
-        gold_button(left, "Enviar a los demás", self.run_char_sync).pack(anchor="w")
-
-        gold_button(right, "Seleccionar todos", lambda: self.char_dst_list.select_all(), small=True).pack(fill="x", pady=3)
-        gold_button(right, "Deseleccionar todos", lambda: self.char_dst_list.select_none(), small=True).pack(fill="x", pady=3)
-
-    def _build_exclusions_tab(self, tab):
-        ctk.CTkLabel(
-            tab, text="Addons que NUNCA se copian (SavedVariables), por nombre exacto sin \".lua\":",
-            text_color=TEXT, font=title_font(13), wraplength=560, justify="left",
-        ).pack(anchor="w", padx=6, pady=(8, 6))
-
-        row = ctk.CTkFrame(tab, fg_color="transparent")
-        row.pack(fill="x", padx=6)
-        self.exc_entry = ctk.CTkEntry(row, width=260, fg_color=FIELD,
-                                       border_color=GOLD_DIM, text_color=TEXT, corner_radius=8,
-                                       placeholder_text="ej: ActionBarSaver")
-        self.exc_entry.pack(side="left")
-        gold_button(row, "Agregar", self.add_exclude, small=True).pack(side="left", padx=6)
-
-        self.exc_list_frame = ctk.CTkScrollableFrame(
-            tab, fg_color=FIELD, corner_radius=10, border_width=1,
-            border_color=GOLD_DIM, height=260,
-        )
-        self.exc_list_frame.pack(fill="both", expand=True, padx=6, pady=10)
-        self._refresh_exclude_rows()
-
-        ctk.CTkLabel(
-            tab, text="Todo lo que NO esté en esta lista se copia normalmente.",
-            text_color=TEXT_DIM, font=title_font(11), justify="left",
-        ).pack(anchor="w", padx=6)
-
-    def _refresh_exclude_rows(self):
-        for w in self.exc_list_frame.winfo_children():
-            w.destroy()
-        for name in self.excludes:
-            row = ctk.CTkFrame(self.exc_list_frame, fg_color="transparent")
-            row.pack(fill="x", pady=2)
-            ctk.CTkLabel(row, text=name, text_color=TEXT, font=title_font(12)).pack(side="left", padx=4)
-            ctk.CTkButton(row, text="Quitar", width=70, height=24,
-                          fg_color="transparent", hover_color="#3a241f",
-                          text_color=DANGER, border_width=1, border_color=DANGER,
-                          corner_radius=6, font=title_font(11),
-                          command=lambda n=name: self.remove_exclude(n)).pack(side="right", padx=4)
-
-    def add_exclude(self):
-        name = self.exc_entry.get().strip()
-        if not name:
-            return
-        name = os.path.splitext(name)[0]
-        if name not in self.excludes:
-            self.excludes.append(name)
-            self.excludes.sort()
-            save_excludes(self.excludes)
-            self._refresh_exclude_rows()
-        self.exc_entry.delete(0, "end")
-
-    def remove_exclude(self, name):
-        if name in self.excludes:
-            self.excludes.remove(name)
-            save_excludes(self.excludes)
-            self._refresh_exclude_rows()
-
-    # -------------------------------------------------------------- log --
-    def _build_log(self):
-        ctk.CTkLabel(self, text="Registro", text_color=GOLD,
-                     font=title_font(13, "bold")).pack(anchor="w", padx=22)
-        self.logw = ctk.CTkTextbox(
-            self, height=150, fg_color=FIELD, text_color=GOLD_HI,
-            corner_radius=12, border_width=2, border_color=GOLD,
-            font=ctk.CTkFont(family="Consolas", size=11),
-        )
-        self.logw.pack(fill="both", expand=True, padx=18, pady=(4, 16))
-        self.logw.configure(state="disabled")
-
-    # ----------------------------------------------------- wtf / listas --
-    def browse(self):
-        d = filedialog.askdirectory(title="Seleccioná la carpeta WTF")
-        if d:
-            self.wtf_root.set(d)
-            self.reload()
-
-    def reload(self):
-        root = self.wtf_root.get().strip()
-        if not root or not os.path.isdir(root):
-            self._popup_error("Carpeta WTF inválida.")
-            return
-        accounts = list_accounts(root)
-        self.acc_src_box.configure(values=accounts)
-        if accounts:
-            self.acc_src_box.set(accounts[0])
-        self.acc_dst_list.set_items(accounts)
-
-        chars = list_characters(root)
-        self._char_map = {}
-        display = []
-        for acc, realm, char, path in chars:
-            key = f"{acc} / {realm} / {char}"
-            self._char_map[key] = path
-            display.append(key)
-        self.char_src_box.configure(values=display)
-        if display:
-            self.char_src_box.set(display[0])
-        self.char_dst_list.set_items(display)
-
-        log(self.logw, f"Cargado: {len(accounts)} cuentas, {len(chars)} personajes.")
-
-    def _popup_error(self, msg):
-        win = ctk.CTkToplevel(self)
-        win.title("Error")
-        win.configure(fg_color=PANEL)
-        win.geometry("340x120")
-        ctk.CTkLabel(win, text=msg, text_color=TEXT, wraplength=300).pack(padx=16, pady=16)
-        gold_button(win, "Cerrar", win.destroy).pack(pady=6)
-
-    def _popup_confirm(self, msg, on_yes):
-        win = ctk.CTkToplevel(self)
-        win.title("Confirmar")
-        win.configure(fg_color=PANEL)
-        win.geometry("420x160")
-        ctk.CTkLabel(win, text=msg, text_color=TEXT, wraplength=380, justify="left").pack(padx=16, pady=16)
-        row = ctk.CTkFrame(win, fg_color="transparent")
-        row.pack(pady=6)
-
-        def _yes():
-            win.destroy()
+    def confirm(msg, on_yes):
+        def _yes(e):
+            page.pop_dialog()
             on_yes()
 
-        gold_button(row, "Confirmar", _yes).pack(side="left", padx=6)
-        gold_button(row, "Cancelar", win.destroy).pack(side="left", padx=6)
+        def _no(e):
+            page.pop_dialog()
 
-    def run_account_sync(self):
-        root = self.wtf_root.get().strip()
-        src = self.acc_src.get()
-        dsts = [d for d in self.acc_dst_list.selected() if d != src]
-        if not src or not dsts:
-            self._popup_error("Elegí cuenta origen y al menos un destino distinto.")
+        dlg = ft.AlertDialog(
+            modal=True,
+            bgcolor=PANEL_A,
+            title=ft.Text("Confirmar", color=GOLD_HI),
+            content=ft.Text(msg, color=TEXT),
+            actions=[
+                ft.TextButton("Cancelar", on_click=_no, style=ft.ButtonStyle(color=TEXT_DIM)),
+                ft.TextButton("Confirmar", on_click=_yes, style=ft.ButtonStyle(color=GOLD_HI)),
+            ],
+        )
+        page.show_dialog(dlg)
+
+    # ---------------------------------------------------------- helpers UI
+    def make_tabview(items):
+        """items: lista de (label, control). Arma un Tabs funcional con esta versión de flet."""
+        bar = ft.TabBar(
+            tabs=[ft.Tab(label=lbl) for lbl, _ in items],
+            indicator_color=GOLD, label_color=GOLD_HI,
+            unselected_label_color=TEXT_DIM, divider_color=GOLD_DIM,
+        )
+        view = ft.TabBarView(controls=[c for _, c in items], expand=True)
+        return ft.Tabs(length=len(items), selected_index=0,
+                        content=ft.Column([bar, view], expand=True, spacing=6))
+
+    def gold_button(text, on_click, outlined=False, small=False):
+        return ft.ElevatedButton(
+            text=text,
+            on_click=on_click,
+            color=GOLD_HI if outlined else "#1a1408",
+            bgcolor=FIELD if outlined else GOLD,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=9),
+                side=ft.BorderSide(1.2, GOLD_DIM if outlined else GOLD),
+                padding=ft.Padding(14, 8 if small else 12, 14, 8 if small else 12),
+                text_style=ft.TextStyle(weight=ft.FontWeight.BOLD, size=12 if small else 13),
+            ),
+        )
+
+    def panel(content, radius=16, pad=18):
+        return ft.Container(
+            content=content,
+            padding=pad,
+            border_radius=radius,
+            gradient=ft.LinearGradient(
+                begin=ft.Alignment.TOP_LEFT, end=ft.Alignment.BOTTOM_RIGHT,
+                colors=[PANEL_A, PANEL_B],
+            ),
+            border=ft.Border.all(1.4, GOLD_DIM),
+            shadow=ft.BoxShadow(blur_radius=16, spread_radius=1,
+                                 color=ft.Colors.with_opacity(0.35, "#000000"),
+                                 offset=ft.Offset(0, 5)),
+        )
+
+    def field_box(content, height=None):
+        return ft.Container(
+            content=content, padding=8, border_radius=10, bgcolor=FIELD,
+            border=ft.Border.all(1, GOLD_DIM), height=height,
+        )
+
+    # ------------------------------------------------- panel cuenta/personaje
+    def make_checklist():
+        col = ft.Column(spacing=2, scroll=ft.ScrollMode.AUTO)
+        return field_box(col, height=190), col
+
+    def build_scope_panel(kind, scope, title, items_getter, dst_label):
+        """items_getter() -> lista de nombres candidatos (cuentas o 'acc / realm / char')."""
+        src_dd = ft.Dropdown(
+            options=[], width=340, bgcolor=FIELD, color=TEXT,
+            border_color=GOLD_DIM, border_radius=9,
+        )
+
+        box, checklist_col = make_checklist()
+        checks = {}
+
+        def on_src_change(e):
+            settings["src"].setdefault(f"{kind}_{scope}", None)
+            settings["src"][f"{kind}_{scope}"] = src_dd.value
+            save_settings(settings)
+
+        src_dd.on_select = on_src_change
+
+        def select_all(e):
+            for cb in checks.values():
+                cb.value = True
+            page.update()
+
+        def select_none(e):
+            for cb in checks.values():
+                cb.value = False
+            page.update()
+
+        def do_run():
+            wtf = state["wtf_root"]
+            src = src_dd.value
+            dsts = [n for n, cb in checks.items() if cb.value and n != src]
+            if not src or not dsts:
+                snack("Elegí origen y al menos un destino distinto.")
+                return
+            runner = JOB_RUNNERS[(kind, scope)]
+            runner(wtf, src, dsts, settings, log_cb)
+            log_cb("Listo.")
+
+        def run_click(e):
+            confirm(f"Se va a sobrescribir en: {', '.join([n for n, cb in checks.items() if cb.value])}. ¿Seguir?", do_run)
+
+        run_btn = gold_button(f"Enviar a los demás ({title.lower()})", run_click)
+
+        header_row = ft.Row([
+            ft.Column([
+                ft.Text(f"{title} origen (main):", color=TEXT, size=13),
+                src_dd,
+            ], spacing=4),
+            ft.Column([
+                gold_button("Seleccionar todas", select_all, outlined=True, small=True),
+                gold_button("Deseleccionar todas", select_none, outlined=True, small=True),
+            ], spacing=6),
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+
+        col = ft.Column([
+            header_row,
+            ft.Text(f"{dst_label}:", color=TEXT, size=13),
+            box,
+            run_btn,
+        ], spacing=10)
+
+        state["panels"][(kind, scope)] = {
+            "src": src_dd, "checks": checks, "checklist_col": checklist_col,
+            "items_getter": items_getter,
+        }
+        return panel(col)
+
+    def refresh_panel(kind, scope):
+        p = state["panels"][(kind, scope)]
+        items = p["items_getter"]()
+        p["src"].options = [ft.dropdown.Option(i) for i in items]
+        saved_src = settings["src"].get(f"{kind}_{scope}")
+        p["src"].value = saved_src if saved_src in items else (items[0] if items else None)
+
+        p["checks"] = {}
+        rows = []
+        for name in items:
+            cb = ft.Checkbox(label=name, value=False, fill_color=GOLD, check_color="#1a1408",
+                              label_style=ft.TextStyle(color=TEXT, size=12))
+            p["checks"][name] = cb
+            rows.append(cb)
+        p["checklist_col"].controls = rows
+
+    # -------------------------------------------------------- exclusiones
+    def build_addon_excludes_panel():
+        box, col = make_checklist()
+
+        def toggle(name):
+            def _h(e):
+                if e.control.value:
+                    if name not in settings["addon_excludes"]:
+                        settings["addon_excludes"].append(name)
+                else:
+                    if name in settings["addon_excludes"]:
+                        settings["addon_excludes"].remove(name)
+                save_settings(settings)
+            return _h
+
+        state["addon_excl_col"] = col
+        return panel(ft.Column([
+            ft.Text("Addons que NUNCA se copian (SavedVariables):", color=TEXT, size=13),
+            ft.Text("Se detectan escaneando la carpeta WTF cargada. Tildado = excluido.", color=TEXT_DIM, size=11),
+            box,
+        ], spacing=10)), toggle
+
+    addon_excl_panel, addon_toggle_factory = build_addon_excludes_panel()
+
+    def refresh_addon_excludes():
+        names = scan_all_addons(state["wtf_root"]) if state["wtf_root"] else []
+        rows = []
+        for name in names:
+            cb = ft.Checkbox(label=name, value=name in settings["addon_excludes"],
+                              fill_color=DANGER, check_color="#1a0808",
+                              label_style=ft.TextStyle(color=TEXT, size=12))
+            cb.on_change = addon_toggle_factory(name)
+            rows.append(cb)
+        state["addon_excl_col"].controls = rows or [ft.Text("Cargá una carpeta WTF para ver los addons detectados.", color=TEXT_DIM, size=12)]
+
+    def build_config_excludes_panel():
+        col = ft.Column(spacing=4)
+        rows = []
+        all_files = {**ACCOUNT_CONFIG_FILES, **CHARACTER_CONFIG_FILES}
+
+        def toggle(fname):
+            def _h(e):
+                if e.control.value:
+                    if fname not in settings["config_excludes"]:
+                        settings["config_excludes"].append(fname)
+                else:
+                    if fname in settings["config_excludes"]:
+                        settings["config_excludes"].remove(fname)
+                save_settings(settings)
+            return _h
+
+        for fname, label in all_files.items():
+            cb = ft.Checkbox(label=f"{label}  ({fname})", value=fname in settings["config_excludes"],
+                              fill_color=DANGER, check_color="#1a0808",
+                              label_style=ft.TextStyle(color=TEXT, size=12))
+            cb.on_change = toggle(fname)
+            rows.append(cb)
+        col.controls = rows
+        return panel(ft.Column([
+            ft.Text("Archivos de configuración que NUNCA se copian:", color=TEXT, size=13),
+            ft.Text("Aplica tanto a nivel cuenta como personaje (si el archivo no corresponde a ese nivel, se ignora).",
+                    color=TEXT_DIM, size=11),
+            field_box(col),
+        ], spacing=10))
+
+    bindings_excl_note = panel(ft.Text(
+        "Los bindeos siempre se copian completos (bindings-cache.wtf). No hay exclusiones parciales acá.",
+        color=TEXT_DIM, size=12))
+
+    # ------------------------------------------------------------ plantillas
+    templates_col = ft.Column(spacing=8)
+    tpl_name_field = ft.TextField(label="Nombre de la plantilla", width=300,
+                                   bgcolor=FIELD, color=TEXT, border_color=GOLD_DIM, border_radius=9)
+
+    def collect_current_jobs():
+        jobs = []
+        for (kind, scope), p in state["panels"].items():
+            src = p["src"].value
+            dsts = [n for n, cb in p["checks"].items() if cb.value and n != src]
+            if src and dsts:
+                jobs.append({"type": kind, "scope": scope, "src": src, "dsts": dsts})
+        return jobs
+
+    def apply_jobs(jobs):
+        if not state["wtf_root"]:
+            snack("Cargá la carpeta WTF primero.")
+            return False
+        for (kind, scope), p in state["panels"].items():
+            p_jobs = [j for j in jobs if j["type"] == kind and j["scope"] == scope]
+            if not p_jobs:
+                continue
+            j = p_jobs[0]
+            if j["src"] in [o.key for o in p["src"].options]:
+                p["src"].value = j["src"]
+            for name, cb in p["checks"].items():
+                cb.value = name in j["dsts"]
+        page.update()
+        return True
+
+    def run_jobs(jobs):
+        for j in jobs:
+            runner = JOB_RUNNERS.get((j["type"], j["scope"]))
+            if runner:
+                runner(state["wtf_root"], j["src"], j["dsts"], settings, log_cb)
+        log_cb("Plantilla ejecutada.")
+
+    def refresh_templates():
+        rows = []
+        for tpl in settings["templates"]:
+            name = tpl["name"]
+
+            def _apply(e, t=tpl):
+                if apply_jobs(t["jobs"]):
+                    snack(f'Plantilla "{t["name"]}" aplicada. Revisá y ejecutá cada sección, o usá "Aplicar y ejecutar".', OK)
+
+            def _apply_run(e, t=tpl):
+                if apply_jobs(t["jobs"]):
+                    run_jobs(t["jobs"])
+
+            def _delete(e, t=tpl):
+                settings["templates"].remove(t)
+                save_settings(settings)
+                refresh_templates()
+
+            rows.append(ft.Container(
+                content=ft.Row([
+                    ft.Text(name, color=GOLD_HI, size=14, weight=ft.FontWeight.BOLD, expand=True),
+                    gold_button("Aplicar", _apply, outlined=True, small=True),
+                    gold_button("Aplicar y ejecutar", _apply_run, small=True),
+                    ft.IconButton(icon=ft.Icons.DELETE_OUTLINE, icon_color=DANGER, on_click=_delete),
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                padding=10, border_radius=9, bgcolor=FIELD, border=ft.Border.all(1, GOLD_DIM),
+            ))
+        templates_col.controls = rows or [ft.Text("Todavía no guardaste ninguna plantilla.", color=TEXT_DIM)]
+        page.update()
+
+    def save_template(e):
+        name = tpl_name_field.value.strip()
+        if not name:
+            snack("Ponele un nombre a la plantilla.")
             return
-
-        def _do():
-            sync_account(root, src, dsts, self.excludes, self.logw)
-            log(self.logw, "Listo.")
-
-        self._popup_confirm(f"Se va a sobrescribir la config de: {', '.join(dsts)}. ¿Seguir?", _do)
-
-    def run_char_sync(self):
-        root = self.wtf_root.get().strip()
-        src_key = self.char_src.get()
-        dst_keys = [k for k in self.char_dst_list.selected() if k != src_key]
-        if not src_key or not dst_keys:
-            self._popup_error("Elegí personaje origen y al menos un destino distinto.")
+        jobs = collect_current_jobs()
+        if not jobs:
+            snack("No hay ninguna selección activa (origen + destinos) para guardar.")
             return
-        options = {k: v.get() for k, v in self.opt_vars.items()}
-        if not any(options.values()):
-            self._popup_error("Marcá al menos una opción para copiar.")
+        settings["templates"] = [t for t in settings["templates"] if t["name"] != name]
+        settings["templates"].append({"name": name, "jobs": jobs})
+        save_settings(settings)
+        tpl_name_field.value = ""
+        refresh_templates()
+        snack(f'Plantilla "{name}" guardada.', OK)
+
+    templates_tab_content = ft.Column([
+        panel(ft.Column([
+            ft.Text("Guardar la selección actual como plantilla", color=TEXT, size=14, weight=ft.FontWeight.BOLD),
+            ft.Text("Toma lo que esté tildado ahora mismo en Addons / Configs / Bindeos (cuenta y personaje) y lo guarda junto.",
+                    color=TEXT_DIM, size=11),
+            ft.Row([tpl_name_field, gold_button("Guardar plantilla actual", save_template)]),
+        ], spacing=8)),
+        ft.Container(height=10),
+        ft.Text("Plantillas guardadas", color=GOLD, size=15, weight=ft.FontWeight.BOLD),
+        templates_col,
+    ], spacing=10, scroll=ft.ScrollMode.AUTO)
+
+    # --------------------------------------------------------------- tabs
+    def sub_tabs(kind, has_account, has_character, extra_account=None, extra_character=None, extra_excl=None):
+        items = []
+        if has_account:
+            content = build_scope_panel(
+                kind, "account", "Cuenta",
+                lambda: state["accounts"],
+                "Cuentas destino",
+            ) if extra_account is None else extra_account
+            items.append(("Cuenta", ft.Container(content, padding=14)))
+        if has_character:
+            content = build_scope_panel(
+                kind, "character", "Personaje",
+                lambda: list(state["char_map"].keys()),
+                "Personajes destino",
+            ) if extra_character is None else extra_character
+            items.append(("Personaje", ft.Container(content, padding=14)))
+        excl = extra_excl if extra_excl is not None else ft.Container()
+        items.append(("Exclusiones", ft.Container(excl, padding=14)))
+        return make_tabview(items)
+
+    addons_tabs = sub_tabs("addons", True, True, extra_excl=addon_excl_panel)
+    configs_excl_panel = build_config_excludes_panel()
+    configs_tabs = sub_tabs("configs", True, True, extra_excl=configs_excl_panel)
+    bindings_tabs = sub_tabs(
+        "bindings", True, True,
+        extra_account=panel(ft.Text("Los bindeos son por personaje. No existen a nivel cuenta.", color=TEXT_DIM)),
+        extra_excl=bindings_excl_note,
+    )
+
+    main_tabs = make_tabview([
+        ("Addons", addons_tabs),
+        ("Configs", configs_tabs),
+        ("Bindeos", bindings_tabs),
+        ("Plantillas", ft.Container(templates_tab_content, padding=14)),
+    ])
+
+    # ------------------------------------------------------------ WTF picker
+    wtf_field = ft.TextField(value=state["wtf_root"], width=440, bgcolor=FIELD, color=TEXT,
+                              border_color=GOLD_DIM, border_radius=9, label="Carpeta WTF")
+
+    def do_reload():
+        root = wtf_field.value.strip()
+        if not root or not os.path.isdir(root):
+            snack("Carpeta WTF inválida.")
             return
+        state["wtf_root"] = root
+        settings["wtf_root"] = root
+        save_settings(settings)
 
-        def _do():
-            src_path = self._char_map[src_key]
-            dst_paths = [self._char_map[k] for k in dst_keys]
-            sync_character(src_path, dst_paths, options, self.excludes, self.logw)
-            log(self.logw, "Listo.")
+        state["accounts"] = list_accounts(root)
+        chars = list_characters(root)
+        state["char_map"] = {f"{a} / {r} / {c}": p for a, r, c, p in chars}
 
-        self._popup_confirm(f"Se va a sobrescribir la config de {len(dst_keys)} personaje(s). ¿Seguir?", _do)
+        for kind_scope in [("addons", "account"), ("addons", "character"),
+                            ("configs", "account"), ("configs", "character"),
+                            ("bindings", "character")]:
+            if kind_scope in state["panels"]:
+                refresh_panel(*kind_scope)
+        refresh_addon_excludes()
+        page.update()
+        log_cb(f"Cargado: {len(state['accounts'])} cuentas, {len(chars)} personajes.")
+
+    async def async_browse(e):
+        path = await file_picker.get_directory_path(dialog_title="Seleccioná la carpeta WTF")
+        if path:
+            wtf_field.value = path
+            page.update()
+            do_reload()
+
+    file_picker = ft.FilePicker()
+    page.services = [file_picker]
+
+    wtf_bar = panel(ft.Row([
+        wtf_field,
+        gold_button("Buscar...", async_browse, outlined=True),
+        gold_button("Cargar", lambda e: do_reload()),
+    ], alignment=ft.MainAxisAlignment.START, spacing=10), pad=14)
+
+    # --------------------------------------------------------------- header
+    header = panel(ft.Column([
+        ft.Text("❖  WoW Config Sync  ❖", color=GOLD_HI, size=24, weight=ft.FontWeight.BOLD),
+        ft.Text("Wrath of the Lich King  ·  cliente 3.3.5a", color=TEXT_DIM, size=12, italic=True),
+    ], spacing=2), pad=16)
+
+    # ------------------------------------------------------------------ log
+    log_view = ft.ListView(spacing=2, auto_scroll=True, expand=True)
+    log_panel = ft.Container(
+        content=log_view, padding=12, border_radius=14, bgcolor=FIELD,
+        border=ft.Border.all(1.6, GOLD), height=170,
+    )
+
+    page.add(
+        ft.Container(
+            content=ft.Column([
+                header,
+                wtf_bar,
+                main_tabs,
+                ft.Text("Registro", color=GOLD, size=13, weight=ft.FontWeight.BOLD),
+                log_panel,
+            ], spacing=12, expand=True),
+            padding=18, expand=True,
+        )
+    )
+
+    if state["wtf_root"] and os.path.isdir(state["wtf_root"]):
+        do_reload()
 
 
 if __name__ == "__main__":
-    App().mainloop()
+    ft.app(target=main)
