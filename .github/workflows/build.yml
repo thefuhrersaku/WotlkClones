@@ -17,7 +17,7 @@ jobs:
           python-version: "3.12"
 
       - name: Instalar dependencias
-        run: pip install flet flet-cli
+        run: pip install flet flet-cli pyinstaller
 
       - name: Compilar exe
         run: flet pack wow_config_sync.py --name wow_config_sync
