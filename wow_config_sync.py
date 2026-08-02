@@ -525,12 +525,12 @@ def main(page: ft.Page):
     tpl_name_field = ft.TextField(label="Nombre de la plantilla", width=300,
                                    bgcolor=FIELD, color=TEXT, border_color=GOLD_DIM, border_radius=9)
     scope_checks = {}
-    scope_rows = []
+    scope_row = ft.Row(wrap=True, spacing=18, run_spacing=4)
     for key, label in SCOPE_LABELS.items():
         cb = ft.Checkbox(label=label, value=False, fill_color=GOLD, check_color="#1a1408",
                           label_style=ft.TextStyle(color=TEXT, size=12))
         scope_checks[key] = cb
-        scope_rows.append(cb)
+        scope_row.controls.append(cb)
 
     def collect_current_jobs(selected_scopes):
         jobs = []
@@ -641,7 +641,7 @@ def main(page: ft.Page):
             ft.Text("Elegí qué secciones incluir. Solo se guarda el origen/destino de las secciones tildadas acá, "
                     "las demás quedan afuera aunque tengan algo tildado en su pestaña.",
                     color=TEXT_DIM, size=11),
-            field_box(ft.Column(scope_rows, spacing=2)),
+            field_box(scope_row),
             ft.Row([tpl_name_field, gold_button("Guardar plantilla actual", save_template)]),
         ], spacing=8)),
         ft.Container(height=10),
@@ -761,6 +761,8 @@ def main(page: ft.Page):
             padding=18, expand=True,
         )
     )
+
+    refresh_templates()
 
     if state["wtf_root"] and os.path.isdir(state["wtf_root"]):
         do_reload()
