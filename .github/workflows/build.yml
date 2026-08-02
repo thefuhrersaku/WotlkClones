@@ -16,11 +16,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Instalar pyinstaller
-        run: pip install pyinstaller
+      - name: Instalar dependencias
+        run: pip install pyinstaller customtkinter
 
       - name: Compilar exe
-        run: pyinstaller --onefile --noconsole wow_config_sync.py
+        run: pyinstaller --onefile --noconsole --collect-data customtkinter wow_config_sync.py
 
       - name: Subir exe como artifact
         uses: actions/upload-artifact@v4
