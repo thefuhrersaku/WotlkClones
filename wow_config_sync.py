@@ -697,7 +697,7 @@ def main(page: ft.Page):
 
         for kind_scope in [("addons", "account"), ("addons", "character"),
                             ("configs", "account"), ("configs", "character"),
-                            ("bindings", "character")]:
+                            ("bindings", "account"), ("bindings", "character")]:
             if kind_scope in state["panels"]:
                 refresh_panel(*kind_scope)
         refresh_addon_excludes()
@@ -714,12 +714,6 @@ def main(page: ft.Page):
     file_picker = ft.FilePicker()
     page.services = [file_picker]
 
-    wtf_bar = panel(ft.Row([
-        wtf_field,
-        gold_button("Buscar...", async_browse, outlined=True),
-        gold_button("Cargar", lambda e: do_reload()),
-    ], alignment=ft.MainAxisAlignment.START, spacing=10), pad=14)
-
     # --------------------------------------------------------------- header
     header = panel(ft.Column([
         ft.Text("❖  WoW Config Sync  ❖", color=GOLD_HI, size=24, weight=ft.FontWeight.BOLD),
@@ -728,10 +722,30 @@ def main(page: ft.Page):
 
     # ------------------------------------------------------------------ log
     log_view = ft.ListView(spacing=2, auto_scroll=True, expand=True)
-    log_panel = ft.Container(
-        content=log_view, padding=12, border_radius=14, bgcolor=FIELD,
-        border=ft.Border.all(1.6, GOLD), height=170,
-    )
+
+    def open_history(e):
+        dlg = ft.AlertDialog(
+            modal=False,
+            bgcolor=PANEL_A,
+            title=ft.Text("❖  Historial  ❖", color=GOLD_HI),
+            content=ft.Container(
+                content=log_view, width=680, height=420, padding=10,
+                border_radius=10, bgcolor=FIELD, border=ft.Border.all(1.4, GOLD_DIM),
+            ),
+            actions=[ft.TextButton("Cerrar", on_click=lambda e: page.pop_dialog(),
+                                    style=ft.ButtonStyle(color=GOLD_HI))],
+        )
+        page.show_dialog(dlg)
+
+    history_btn = gold_button("❖ Historial", open_history, outlined=True)
+
+    wtf_bar = panel(ft.Row([
+        wtf_field,
+        gold_button("Buscar...", async_browse, outlined=True),
+        gold_button("Cargar", lambda e: do_reload()),
+        ft.Container(expand=True),
+        history_btn,
+    ], alignment=ft.MainAxisAlignment.START, spacing=10), pad=14)
 
     page.add(
         ft.Container(
@@ -739,8 +753,6 @@ def main(page: ft.Page):
                 header,
                 wtf_bar,
                 main_tabs,
-                ft.Text("Registro", color=GOLD, size=13, weight=ft.FontWeight.BOLD),
-                log_panel,
             ], spacing=12, expand=True),
             padding=18, expand=True,
         )
