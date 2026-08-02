@@ -20,7 +20,7 @@ jobs:
         run: pip install flet flet-cli pyinstaller
 
       - name: Compilar exe
-        run: flet pack wow_config_sync.py --name wow_config_sync
+        run: flet pack wow_config_sync.py --name wow_config_sync --icon icon.ico
 
       - name: Subir exe como artifact
         uses: actions/upload-artifact@v4
