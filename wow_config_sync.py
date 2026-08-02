@@ -281,7 +281,7 @@ def main(page: ft.Page):
             unselected_label_color=TEXT_DIM, divider_color=GOLD_DIM,
         )
         view = ft.TabBarView(controls=[c for _, c in items], expand=True)
-        return ft.Tabs(length=len(items), selected_index=0,
+        return ft.Tabs(length=len(items), selected_index=0, expand=True,
                         content=ft.Column([bar, view], expand=True, spacing=6))
 
     def gold_button(text, on_click, outlined=False, small=False):
