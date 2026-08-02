@@ -211,6 +211,15 @@ def sync_configs_character(src_path, dst_paths, excluded_files, log_cb):
             copy_replace(os.path.join(src_path, fname), dst_path, log_cb)
 
 
+def sync_bindings_account(wtf_root, src, dsts, log_cb):
+    src_dir = os.path.join(wtf_root, "Account", src)
+    for dst in dsts:
+        dst_dir = os.path.join(wtf_root, "Account", dst)
+        log_cb(f"\n== Bindeos cuenta: {src} -> {dst} ==")
+        clean_junk(dst_dir, log_cb)
+        copy_replace(os.path.join(src_dir, BINDINGS_FILE), dst_dir, log_cb)
+
+
 def sync_bindings_character(src_path, dst_paths, log_cb):
     for dst_path in dst_paths:
         log_cb(f"\n== Bindeos: {src_path} -> {dst_path} ==")
@@ -224,6 +233,7 @@ JOB_RUNNERS = {
     ("configs", "account"): lambda wtf, src, dsts, s, log: sync_configs_account(wtf, src, dsts, s["config_excludes"], log),
     ("configs", "character"): lambda wtf, src, dsts, s, log: sync_configs_character(src, dsts, s["config_excludes"], log),
     ("bindings", "character"): lambda wtf, src, dsts, s, log: sync_bindings_character(src, dsts, log),
+    ("bindings", "account"): lambda wtf, src, dsts, s, log: sync_bindings_account(wtf, src, dsts, log),
 }
 
 
@@ -342,14 +352,32 @@ def main(page: ft.Page):
 
         src_dd.on_select = on_src_change
 
+        search_field = None
+        if scope == "character":
+            search_field = ft.TextField(
+                hint_text="Buscar personaje...", width=220, bgcolor=FIELD, color=TEXT,
+                border_color=GOLD_DIM, border_radius=9, dense=True,
+                on_change=lambda e: render_rows(),
+            )
+
+        def render_rows():
+            q = (search_field.value or "").strip().lower() if search_field else ""
+            rows = [cb for name, cb in checks.items() if q in name.lower()]
+            checklist_col.controls = rows
+            page.update()
+
         def select_all(e):
-            for cb in checks.values():
-                cb.value = True
+            q = (search_field.value or "").strip().lower() if search_field else ""
+            for name, cb in checks.items():
+                if q in name.lower():
+                    cb.value = True
             page.update()
 
         def select_none(e):
-            for cb in checks.values():
-                cb.value = False
+            q = (search_field.value or "").strip().lower() if search_field else ""
+            for name, cb in checks.items():
+                if q in name.lower():
+                    cb.value = False
             page.update()
 
         def do_run():
@@ -368,10 +396,14 @@ def main(page: ft.Page):
 
         run_btn = gold_button(f"Enviar a los demás ({title.lower()})", run_click)
 
+        src_row_controls = [src_dd]
+        if search_field:
+            src_row_controls.append(search_field)
+
         header_row = ft.Row([
             ft.Column([
                 ft.Text(f"{title} origen (main):", color=TEXT, size=13),
-                src_dd,
+                ft.Row(src_row_controls, spacing=8),
             ], spacing=4),
             ft.Column([
                 gold_button("Seleccionar todas", select_all, outlined=True, small=True),
@@ -388,6 +420,7 @@ def main(page: ft.Page):
 
         state["panels"][(kind, scope)] = {
             "src": src_dd, "checks": checks, "checklist_col": checklist_col,
+            "render_rows": render_rows, "search_field": search_field,
             "items_getter": items_getter,
         }
         return panel(col)
@@ -400,13 +433,13 @@ def main(page: ft.Page):
         p["src"].value = saved_src if saved_src in items else (items[0] if items else None)
 
         p["checks"].clear()
-        rows = []
         for name in items:
             cb = ft.Checkbox(label=name, value=False, fill_color=GOLD, check_color="#1a1408",
                               label_style=ft.TextStyle(color=TEXT, size=12), on_change=lambda e: None)
             p["checks"][name] = cb
-            rows.append(cb)
-        p["checklist_col"].controls = rows
+        if p.get("search_field") is not None:
+            p["search_field"].value = ""
+        p["render_rows"]()
 
     # -------------------------------------------------------- exclusiones
     def build_addon_excludes_panel():
@@ -474,22 +507,46 @@ def main(page: ft.Page):
         ], spacing=10))
 
     bindings_excl_note = panel(ft.Text(
-        "Los bindeos siempre se copian completos (bindings-cache.wtf). No hay exclusiones parciales acá.",
+        "Los bindeos siempre se copian completos (bindings-cache.wtf), tanto a nivel cuenta como personaje "
+        "según cómo tengas configurado \"keybindings por personaje\" en el juego. No hay exclusiones parciales acá.",
         color=TEXT_DIM, size=12))
 
     # ------------------------------------------------------------ plantillas
+    SCOPE_LABELS = {
+        ("addons", "account"): "Addons - Cuenta",
+        ("addons", "character"): "Addons - Personaje",
+        ("configs", "account"): "Configs - Cuenta",
+        ("configs", "character"): "Configs - Personaje",
+        ("bindings", "account"): "Bindeos - Cuenta",
+        ("bindings", "character"): "Bindeos - Personaje",
+    }
+
     templates_col = ft.Column(spacing=8)
     tpl_name_field = ft.TextField(label="Nombre de la plantilla", width=300,
                                    bgcolor=FIELD, color=TEXT, border_color=GOLD_DIM, border_radius=9)
+    scope_checks = {}
+    scope_rows = []
+    for key, label in SCOPE_LABELS.items():
+        cb = ft.Checkbox(label=label, value=False, fill_color=GOLD, check_color="#1a1408",
+                          label_style=ft.TextStyle(color=TEXT, size=12))
+        scope_checks[key] = cb
+        scope_rows.append(cb)
 
-    def collect_current_jobs():
+    def collect_current_jobs(selected_scopes):
         jobs = []
-        for (kind, scope), p in state["panels"].items():
+        missing = []
+        for key in selected_scopes:
+            p = state["panels"].get(key)
+            if not p:
+                continue
+            kind, scope = key
             src = p["src"].value
             dsts = [n for n, cb in p["checks"].items() if cb.value and n != src]
             if src and dsts:
                 jobs.append({"type": kind, "scope": scope, "src": src, "dsts": dsts})
-        return jobs
+            else:
+                missing.append(SCOPE_LABELS[key])
+        return jobs, missing
 
     def apply_jobs(jobs):
         if not state["wtf_root"]:
@@ -504,6 +561,9 @@ def main(page: ft.Page):
                 p["src"].value = j["src"]
             for name, cb in p["checks"].items():
                 cb.value = name in j["dsts"]
+            if p.get("search_field") is not None:
+                p["search_field"].value = ""
+            p["render_rows"]()
         page.update()
         return True
 
@@ -518,6 +578,7 @@ def main(page: ft.Page):
         rows = []
         for tpl in settings["templates"]:
             name = tpl["name"]
+            included = ", ".join(SCOPE_LABELS.get((j["type"], j["scope"]), f'{j["type"]}/{j["scope"]}') for j in tpl["jobs"])
 
             def _apply(e, t=tpl):
                 if apply_jobs(t["jobs"]):
@@ -533,12 +594,15 @@ def main(page: ft.Page):
                 refresh_templates()
 
             rows.append(ft.Container(
-                content=ft.Row([
-                    ft.Text(name, color=GOLD_HI, size=14, weight=ft.FontWeight.BOLD, expand=True),
-                    gold_button("Aplicar", _apply, outlined=True, small=True),
-                    gold_button("Aplicar y ejecutar", _apply_run, small=True),
-                    ft.IconButton(icon=ft.Icons.DELETE_OUTLINE, icon_color=DANGER, on_click=_delete),
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                content=ft.Column([
+                    ft.Row([
+                        ft.Text(name, color=GOLD_HI, size=14, weight=ft.FontWeight.BOLD, expand=True),
+                        gold_button("Aplicar", _apply, outlined=True, small=True),
+                        gold_button("Aplicar y ejecutar", _apply_run, small=True),
+                        ft.IconButton(icon=ft.Icons.DELETE_OUTLINE, icon_color=DANGER, on_click=_delete),
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    ft.Text(included or "(sin secciones)", color=TEXT_DIM, size=11),
+                ], spacing=4),
                 padding=10, border_radius=9, bgcolor=FIELD, border=ft.Border.all(1, GOLD_DIM),
             ))
         templates_col.controls = rows or [ft.Text("Todavía no guardaste ninguna plantilla.", color=TEXT_DIM)]
@@ -549,22 +613,31 @@ def main(page: ft.Page):
         if not name:
             snack("Ponele un nombre a la plantilla.")
             return
-        jobs = collect_current_jobs()
+        selected_scopes = [key for key, cb in scope_checks.items() if cb.value]
+        if not selected_scopes:
+            snack("Tildá al menos una sección (Addons, Configs o Bindeos) para esta plantilla.")
+            return
+        jobs, missing = collect_current_jobs(selected_scopes)
         if not jobs:
-            snack("No hay ninguna selección activa (origen + destinos) para guardar.")
+            snack("Ninguna de las secciones tildadas tiene origen + destinos elegidos ahora mismo.")
             return
         settings["templates"] = [t for t in settings["templates"] if t["name"] != name]
         settings["templates"].append({"name": name, "jobs": jobs})
         save_settings(settings)
         tpl_name_field.value = ""
         refresh_templates()
-        snack(f'Plantilla "{name}" guardada.', OK)
+        msg = f'Plantilla "{name}" guardada.'
+        if missing:
+            msg += f' (sin datos, no incluidas: {", ".join(missing)})'
+        snack(msg, OK)
 
     templates_tab_content = ft.Column([
         panel(ft.Column([
             ft.Text("Guardar la selección actual como plantilla", color=TEXT, size=14, weight=ft.FontWeight.BOLD),
-            ft.Text("Toma lo que esté tildado ahora mismo en Addons / Configs / Bindeos (cuenta y personaje) y lo guarda junto.",
+            ft.Text("Elegí qué secciones incluir. Solo se guarda el origen/destino de las secciones tildadas acá, "
+                    "las demás quedan afuera aunque tengan algo tildado en su pestaña.",
                     color=TEXT_DIM, size=11),
+            field_box(ft.Column(scope_rows, spacing=2)),
             ft.Row([tpl_name_field, gold_button("Guardar plantilla actual", save_template)]),
         ], spacing=8)),
         ft.Container(height=10),
@@ -596,11 +669,7 @@ def main(page: ft.Page):
     addons_tabs = sub_tabs("addons", True, True, extra_excl=addon_excl_panel)
     configs_excl_panel = build_config_excludes_panel()
     configs_tabs = sub_tabs("configs", True, True, extra_excl=configs_excl_panel)
-    bindings_tabs = sub_tabs(
-        "bindings", True, True,
-        extra_account=panel(ft.Text("Los bindeos son por personaje. No existen a nivel cuenta.", color=TEXT_DIM)),
-        extra_excl=bindings_excl_note,
-    )
+    bindings_tabs = sub_tabs("bindings", True, True, extra_excl=bindings_excl_note)
 
     main_tabs = make_tabview([
         ("Addons", addons_tabs),
