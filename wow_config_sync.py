@@ -554,13 +554,17 @@ def main(page: ft.Page):
             return False
         for (kind, scope), p in state["panels"].items():
             p_jobs = [j for j in jobs if j["type"] == kind and j["scope"] == scope]
-            if not p_jobs:
-                continue
-            j = p_jobs[0]
-            if j["src"] in [o.key for o in p["src"].options]:
-                p["src"].value = j["src"]
-            for name, cb in p["checks"].items():
-                cb.value = name in j["dsts"]
+            if p_jobs:
+                j = p_jobs[0]
+                if j["src"] in [o.key for o in p["src"].options]:
+                    p["src"].value = j["src"]
+                for name, cb in p["checks"].items():
+                    cb.value = name in j["dsts"]
+            else:
+                # sección no incluida en la plantilla: se limpia, no queda un resto
+                # de una selección manual anterior en esta misma sesión.
+                for cb in p["checks"].values():
+                    cb.value = False
             if p.get("search_field") is not None:
                 p["search_field"].value = ""
             p["render_rows"]()
