@@ -286,7 +286,7 @@ def main(page: ft.Page):
 
     def gold_button(text, on_click, outlined=False, small=False):
         return ft.ElevatedButton(
-            text=text,
+            content=text,
             on_click=on_click,
             color=GOLD_HI if outlined else "#1a1408",
             bgcolor=FIELD if outlined else GOLD,
