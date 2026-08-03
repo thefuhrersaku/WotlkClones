@@ -4,8 +4,11 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "WotlkClones.py"
-      - "installer.iss"
+      - "src-tauri/**"
+      - "static/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/build.yml"
 
 jobs:
   build:
@@ -13,38 +16,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Instalar Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache de Cargo
+        uses: swatinem/rust-cache@v2
         with:
-          python-version: "3.12"
+          workspaces: src-tauri
 
-      - name: Instalar dependencias de Python
-        run: pip install flet flet-cli pyinstaller
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
 
-      - name: Compilar exe (modo carpeta)
-        run: >
-          flet pack WotlkClones.py
-          --onedir
-          --name WotlkClones
-          --icon icon.ico
-          --product-name "WOTLK Clones"
-          --file-description "WOTLK Clones - Config Sync"
-          --company-name "WOTLK Clones"
-          --copyright "WOTLK Clones"
+      - name: Instalar dependencias del CLI
+        run: npm ci
 
-      - name: Instalar Inno Setup
-        run: choco install innosetup -y
-
-      - name: Compilar instalador
-        run: iscc installer.iss
+      - name: Compilar app + instalador NSIS
+        run: npm run tauri -- build
 
       - name: Subir instalador como artifact
         uses: actions/upload-artifact@v4
         with:
           name: WotlkClones-Setup
-          path: installer_output/WotlkClones-Setup.exe
+          path: src-tauri/target/release/bundle/nsis/*-setup.exe
 
-      - name: Subir carpeta suelta como artifact (opcional, sin instalar)
+      - name: Subir exe suelto como artifact
         uses: actions/upload-artifact@v4
         with:
-          name: WotlkClones-carpeta
-          path: dist/WotlkClones
+          name: WotlkClones-exe
+          path: src-tauri/target/release/WotlkClones.exe

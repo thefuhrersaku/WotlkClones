@@ -1,0 +1,6 @@
+node_modules/
+dist/
+installer_output/
+src-tauri/target/
+src-tauri/gen/schemas/
+wow_config_sync_settings.json

@@ -1,0 +1,12 @@
+{
+  "name": "wotlk-clones",
+  "private": true,
+  "version": "1.0.0",
+  "description": "WOTLK Clones - Config Sync 3.3.5a",
+  "scripts": {
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

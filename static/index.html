@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WOTLK Clones</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="panel header">
+      <div class="title">❖&nbsp;&nbsp;WOTLK Clones&nbsp;&nbsp;❖</div>
+      <div class="subtitle">Wrath of the Lich King&nbsp;&nbsp;·&nbsp;&nbsp;cliente 3.3.5a</div>
+    </header>
+
+    <div class="panel wtf-bar">
+      <input id="wtfField" type="text" placeholder="Carpeta WTF" spellcheck="false" />
+      <button id="browseBtn" class="btn outline">Buscar...</button>
+      <button id="loadBtn" class="btn">Cargar</button>
+      <div class="spacer"></div>
+      <button id="historyBtn" class="btn outline">❖ Historial</button>
+    </div>
+
+    <div id="mainTabs"></div>
+  </div>
+
+  <div class="modal-overlay hidden" id="confirmOverlay">
+    <div class="modal">
+      <div class="modal-title">Confirmar</div>
+      <div class="modal-text" id="confirmText"></div>
+      <div class="modal-actions">
+        <button id="confirmNo" class="btn outline">Cancelar</button>
+        <button id="confirmYes" class="btn">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="historyOverlay">
+    <div class="modal wide">
+      <div class="modal-title">❖&nbsp;&nbsp;Historial&nbsp;&nbsp;❖</div>
+      <div class="log-box" id="logView"></div>
+      <div class="modal-actions">
+        <button id="historyClose" class="btn outline">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="snackbar" class="hidden"></div>
+
+  <script src="main.js"></script>
+</body>
+</html>
