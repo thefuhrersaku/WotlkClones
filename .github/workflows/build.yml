@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "wow_config_sync.py"
+      - "WotlkClones.py"
 
 jobs:
   build:
@@ -20,10 +20,17 @@ jobs:
         run: pip install flet flet-cli pyinstaller
 
       - name: Compilar exe
-        run: flet pack WotlkClones.py --name wow_config_sync --icon icon.ico
+        run: >
+          flet pack WotlkClones.py
+          --name WotlkClones
+          --icon icon.ico
+          --product-name "WOTLK Clones"
+          --file-description "WOTLK Clones - Config Sync"
+          --company-name "WOTLK Clones"
+          --copyright "WOTLK Clones"
 
       - name: Subir exe como artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wow_config_sync-exe
-          path: dist/wow_config_sync.exe
+          name: WotlkClones-exe
+          path: dist/WotlkClones.exe
