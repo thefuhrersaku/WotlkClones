@@ -19,9 +19,10 @@ jobs:
       - name: Instalar dependencias
         run: pip install flet flet-cli pyinstaller
 
-      - name: Compilar exe
+      - name: Compilar exe (modo carpeta, mejor para anclar en la barra de tareas)
         run: >
           flet pack WotlkClones.py
+          --onedir
           --name WotlkClones
           --icon icon.ico
           --product-name "WOTLK Clones"
@@ -29,8 +30,8 @@ jobs:
           --company-name "WOTLK Clones"
           --copyright "WOTLK Clones"
 
-      - name: Subir exe como artifact
+      - name: Subir carpeta completa como artifact
         uses: actions/upload-artifact@v4
         with:
-          name: WotlkClones-exe
-          path: dist/WotlkClones.exe
+          name: WotlkClones-carpeta
+          path: dist/WotlkClones
