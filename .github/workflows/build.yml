@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "WotlkClones.py"
+      - "installer.iss"
 
 jobs:
   build:
@@ -16,10 +17,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Instalar dependencias
+      - name: Instalar dependencias de Python
         run: pip install flet flet-cli pyinstaller
 
-      - name: Compilar exe (modo carpeta, mejor para anclar en la barra de tareas)
+      - name: Compilar exe (modo carpeta)
         run: >
           flet pack WotlkClones.py
           --onedir
@@ -30,7 +31,19 @@ jobs:
           --company-name "WOTLK Clones"
           --copyright "WOTLK Clones"
 
-      - name: Subir carpeta completa como artifact
+      - name: Instalar Inno Setup
+        run: choco install innosetup -y
+
+      - name: Compilar instalador
+        run: iscc installer.iss
+
+      - name: Subir instalador como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WotlkClones-Setup
+          path: installer_output/WotlkClones-Setup.exe
+
+      - name: Subir carpeta suelta como artifact (opcional, sin instalar)
         uses: actions/upload-artifact@v4
         with:
           name: WotlkClones-carpeta
