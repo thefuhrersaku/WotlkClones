@@ -71,10 +71,16 @@ pub struct Settings {
     pub templates: Vec<Template>,
     #[serde(default = "default_backup_enabled")]
     pub backup_enabled: bool,
+    #[serde(default = "default_lang")]
+    pub lang: String,
 }
 
 fn default_backup_enabled() -> bool {
     true
+}
+
+fn default_lang() -> String {
+    "es".to_string()
 }
 
 impl Default for Settings {
@@ -86,6 +92,7 @@ impl Default for Settings {
             config_excludes: Vec::new(),
             templates: Vec::new(),
             backup_enabled: true,
+            lang: "es".to_string(),
         }
     }
 }

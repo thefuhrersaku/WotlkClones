@@ -34,6 +34,21 @@ pub fn scan_all_addons(wtf_root: String) -> Vec<String> {
     sync::scan_all_addons(&wtf_root)
 }
 
+#[tauri::command]
+pub fn get_backups(app: AppHandle) -> Vec<sync::BackupInfo> {
+    sync::list_backups(&app)
+}
+
+#[tauri::command]
+pub fn restore_backup(backup_path: String, wtf_root: String) -> Result<Vec<String>, String> {
+    sync::restore_backup(&backup_path, &wtf_root)
+}
+
+#[tauri::command]
+pub fn delete_backup(backup_path: String) -> Result<(), String> {
+    sync::delete_backup(&backup_path)
+}
+
 #[derive(Serialize, Clone)]
 pub struct SyncProgress {
     pub done: u32,

@@ -298,6 +298,113 @@ pub fn make_backup(
     Ok(backup_root.display().to_string())
 }
 
+#[derive(Serialize, Clone, Debug)]
+pub struct BackupInfo {
+    pub id: String,
+    pub path: String,
+    pub ts: u64,
+    pub files: u64,
+    pub accounts: Vec<String>,
+}
+
+fn count_files(p: &Path) -> u64 {
+    let mut n = 0;
+    if p.is_dir() {
+        if let Ok(entries) = fs::read_dir(p) {
+            for e in entries.flatten() {
+                n += count_files(&e.path());
+            }
+        }
+    } else if p.is_file() {
+        n = 1;
+    }
+    n
+}
+
+pub fn backups_root(app: &tauri::AppHandle) -> std::path::PathBuf {
+    app.path()
+        .app_config_dir()
+        .map(|d| d.join("backups"))
+        .unwrap_or_default()
+}
+
+pub fn list_backups(app: &tauri::AppHandle) -> Vec<BackupInfo> {
+    let mut out = Vec::new();
+    if let Ok(entries) = fs::read_dir(backups_root(app)) {
+        for e in entries.flatten() {
+            if !e.path().is_dir() {
+                continue;
+            }
+            let name = e.file_name().to_string_lossy().to_string();
+            let ts = name
+                .strip_prefix("backup_")
+                .and_then(|n| n.parse::<u64>().ok())
+                .unwrap_or(0);
+            let mut files = 0u64;
+            let mut accounts = Vec::new();
+            let acc = e.path().join("Account");
+            if let Ok(acc_entries) = fs::read_dir(&acc) {
+                for acc_e in acc_entries.flatten() {
+                    if !acc_e.path().is_dir() {
+                        continue;
+                    }
+                    accounts.push(acc_e.file_name().to_string_lossy().to_string());
+                    files += count_files(&acc_e.path());
+                }
+            }
+            out.push(BackupInfo {
+                id: name.clone(),
+                path: e.path().display().to_string(),
+                ts,
+                files,
+                accounts,
+            });
+        }
+    }
+    out.sort_by(|a, b| b.ts.cmp(&a.ts));
+    out
+}
+
+fn copy_tree(src: &Path, dst: &Path, log: &mut Vec<String>) {
+    if src.is_dir() {
+        if fs::create_dir_all(dst).is_err() {
+            return;
+        }
+        if let Ok(entries) = fs::read_dir(src) {
+            for e in entries.flatten() {
+                copy_tree(&e.path(), &dst.join(e.file_name()), log);
+            }
+        }
+    } else if src.is_file() {
+        match fs::copy(src, dst) {
+            Ok(_) => log.push(format!("  restaurado: {}", dst.display())),
+            Err(err) => log.push(format!("  ERROR restaurando {}: {}", dst.display(), err)),
+        }
+    }
+}
+
+pub fn restore_backup(backup_path: &str, wtf_root: &str) -> Result<Vec<String>, String> {
+    let src_root = Path::new(backup_path);
+    let dst_root = Path::new(wtf_root);
+    if !src_root.is_dir() {
+        return Err("El backup seleccionado ya no existe.".to_string());
+    }
+    if !dst_root.is_dir() {
+        return Err("La carpeta WTF configurada ya no existe.".to_string());
+    }
+    let mut log = Vec::new();
+    copy_tree(src_root, dst_root, &mut log);
+    Ok(log)
+}
+
+pub fn delete_backup(backup_path: &str) -> Result<(), String> {
+    let p = Path::new(backup_path);
+    if !p.is_dir() {
+        return Err("El backup seleccionado ya no existe.".to_string());
+    }
+    fs::remove_dir_all(p).map_err(|e| e.to_string())
+}
+
 // ============================================================== sync
 fn sync_addons_account(wtf_root: &str, src: &str, dsts: &[String], s: &Settings, log: &mut Vec<String>) {
     let src_dir = Path::new(wtf_root).join("Account").join(src);

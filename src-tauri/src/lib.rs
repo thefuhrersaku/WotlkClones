@@ -14,6 +14,9 @@ pub fn run() {
             commands::list_characters,
             commands::scan_all_addons,
             commands::run_sync,
+            commands::get_backups,
+            commands::restore_backup,
+            commands::delete_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

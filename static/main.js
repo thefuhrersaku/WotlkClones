@@ -12,16 +12,6 @@ const CHARACTER_CONFIG_FILES = [
   ['addons.txt', 'Lista de addons activados'],
 ];
 
-const KIND_SHORT = { addons: 'Addons', configs: 'Configs', bindings: 'Bindeos' };
-const SCOPE_LABELS = {
-  addons_account: 'Addons - Cuenta',
-  addons_character: 'Addons - Personaje',
-  configs_account: 'Configs - Cuenta',
-  configs_character: 'Configs - Personaje',
-  bindings_account: 'Bindeos - Cuenta',
-  bindings_character: 'Bindeos - Personaje',
-};
-
 const state = {
   settings: null,
   wtfRoot: '',
@@ -33,6 +23,38 @@ const state = {
   templatesColEl: null,
   logLines: [],
 };
+
+// ================================================================ i18n
+function lang() {
+  return (state.settings && state.settings.lang) || 'es';
+}
+
+function t(key, vars) {
+  const dict = window.I18N[lang()] || window.I18N.es;
+  let s = dict[key] ?? window.I18N.es[key] ?? key;
+  if (vars) {
+    for (const [k, v] of Object.entries(vars)) s = s.split('{' + k + '}').join(v);
+  }
+  return s;
+}
+
+function kindLabel(kind) {
+  return t('kind.' + kind);
+}
+
+function scopeLabel(kind, scope) {
+  return `${t('kind.' + kind)} - ${t('scope.' + scope)}`;
+}
+
+function configFileLabel(fname) {
+  const map = {
+    'config-cache.wtf': t('configFile.general'),
+    'macros-cache.txt': t('configFile.macros'),
+    'layout-cache.txt': t('configFile.layout'),
+    'addons.txt': t('configFile.addonList'),
+  };
+  return map[fname] || fname;
+}
 
 // ================================================================ helpers
 function el(tag, props = {}, ...children) {
@@ -74,21 +96,20 @@ function snack(msg, ok = false) {
   snackTimer = setTimeout(() => sb.classList.add('hidden'), 3500);
 }
 
-function logClass(t) {
-  const s = t.trim();
+function logClass(s) {
+  s = s.trim();
   if (/ERROR/i.test(s)) return 'log-error';
   if (/^==.*==$/.test(s)) return 'log-head';
   if (/^  /.test(s)) return 'log-dim';
-  if (/^(Listo|Plantilla ejecutada)/.test(s)) return 'log-ok';
   return '';
 }
 
-function log(text) {
+function log(text, forcedCls = '') {
   const lv = document.getElementById('logView');
   for (const part of String(text).split('\n')) {
     if (!part.trim()) continue;
     state.logLines.push(part);
-    const cls = logClass(part);
+    const cls = forcedCls || logClass(part);
     lv.appendChild(el('div', { class: 'log-line' + (cls ? ' ' + cls : ''), text: part }));
     lv.scrollTop = lv.scrollHeight;
   }
@@ -109,6 +130,41 @@ function openHistory() {
   document.getElementById('historyOverlay').classList.remove('hidden');
 }
 
+// ================================================================ idioma
+function applyLang() {
+  document.documentElement.lang = lang();
+  document.querySelectorAll('[data-i18n]').forEach((n) => {
+    n.textContent = t(n.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((n) => {
+    n.placeholder = t(n.getAttribute('data-i18n-placeholder'));
+  });
+  const langNames = { es: 'Español', en: 'English', ru: 'Русский' };
+  document.querySelectorAll('.lang-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.lang === lang());
+    b.title = langNames[b.dataset.lang] || b.dataset.lang;
+  });
+  rebuildTabs();
+}
+
+function setLang(newLang) {
+  if (!window.I18N[newLang] || newLang === lang()) return;
+  state.settings.lang = newLang;
+  saveSettings();
+  applyLang();
+}
+
+function rebuildTabs() {
+  const host = document.getElementById('mainTabs');
+  host.textContent = '';
+  host.appendChild(buildMainTabs());
+  for (const key of Object.keys(state.panels)) {
+    const [kind, scope] = key.split('_');
+    refreshPanel(kind, scope);
+  }
+  refreshTemplates();
+}
+
 // ================================================================ progreso
 let progressDone = 0;
 let progressTotal = 0;
@@ -119,11 +175,13 @@ function setProgressFill(frac) {
   fill.style.width = Math.round(Math.min(1, Math.max(0, frac)) * 100) + '%';
 }
 
-async function startProgress(total, title) {
+async function startProgress(total, title, indeterminate = false) {
   progressDone = 0;
   progressTotal = Math.max(total, 1);
+  const fill = document.getElementById('progressFill');
+  fill.classList.toggle('indeterminate', indeterminate);
   document.getElementById('progressTitle').textContent = title;
-  document.getElementById('progressText').textContent = 'Preparando...';
+  document.getElementById('progressText').textContent = t('progress.preparing');
   setProgressFill(0);
   document.getElementById('progressOverlay').classList.remove('hidden');
   if (!progressUnlisten) {
@@ -132,7 +190,7 @@ async function startProgress(total, title) {
         const { done, current } = e.payload;
         if (done > 0) progressDone = Math.min(progressDone + 1, progressTotal);
         setProgressFill(progressDone / progressTotal);
-        if (current) document.getElementById('progressText').textContent = 'Copiando a: ' + current;
+        if (current) document.getElementById('progressText').textContent = t('progress.copyingTo', { dst: current });
       });
     } catch (err) {
       console.error(err);
@@ -145,11 +203,83 @@ function finishProgress(ok, msg) {
     progressUnlisten();
     progressUnlisten = null;
   }
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
   document.getElementById('progressOverlay').classList.add('hidden');
   setProgressFill(0);
   if (ok) {
     document.getElementById('successText').textContent = msg;
     document.getElementById('successOverlay').classList.remove('hidden');
+  }
+}
+
+// ================================================================ backups
+async function refreshBackups() {
+  const list = document.getElementById('backupsList');
+  list.textContent = '';
+  let backups = [];
+  try {
+    backups = await invoke('get_backups');
+  } catch (e) {
+    list.appendChild(el('div', { class: 'empty-hint', text: t('backups.readError', { err: e }) }));
+    return;
+  }
+  if (!backups.length) {
+    list.appendChild(el('div', { class: 'empty-hint', text: t('backups.noBackups') }));
+    return;
+  }
+  for (const b of backups) {
+    const date = new Date(Number(b.ts)).toLocaleString(lang());
+    const detail = b.accounts.length
+      ? t('backups.accounts', { list: b.accounts.join(', '), files: b.files })
+      : t('backups.files', { files: b.files });
+    const restoreBtn = btn(t('backups.restore'), 'small', () => {
+      confirm(t('backups.restoreConfirm', { date }), () => doRestore(b));
+    });
+    const delBtn = btn(t('backups.delete'), 'small outline', () => {
+      confirm(t('backups.deleteConfirm', { date }), () => doDelete(b));
+    });
+    list.appendChild(
+      el(
+        'div',
+        { class: 'backup-card' },
+        el(
+          'div',
+          { class: 'backup-info' },
+          el('div', { class: 'backup-name', text: date }),
+          el('div', { class: 'backup-detail', text: detail })
+        ),
+        el('div', { class: 'backup-actions' }, restoreBtn, delBtn)
+      )
+    );
+  }
+}
+
+async function doRestore(b) {
+  if (!state.wtfRoot) {
+    snack(t('wtf.loadFirst'));
+    return;
+  }
+  await startProgress(1, t('backups.restoring'), true);
+  try {
+    const lines = await invoke('restore_backup', { backupPath: b.path, wtfRoot: state.wtfRoot });
+    lines.forEach((l) => log(l));
+    log(t('backups.restoredLog'), 'log-ok');
+    finishProgress(true, t('backups.restored'));
+  } catch (e) {
+    log('ERROR: ' + e);
+    snack(t('common.error', { err: e }));
+    finishProgress(false);
+  }
+}
+
+async function doDelete(b) {
+  try {
+    await invoke('delete_backup', { backupPath: b.path });
+    snack(t('backups.deleted'), true);
+    await refreshBackups();
+  } catch (e) {
+    snack(t('common.error', { err: e }));
   }
 }
 
@@ -177,13 +307,13 @@ function makeTabs(items) {
 
 // ============================================================== paneles de scope
 function buildScopePanel(kind, scope) {
-  const title = scope === 'account' ? 'Cuenta' : 'Personaje';
-  const dstLabel = scope === 'account' ? 'Cuentas destino:' : 'Personajes destino:';
+  const title = t('scope.' + scope);
+  const dstLabel = scope === 'account' ? t('scope.accountDst') : t('scope.characterDst');
 
   const srcSelect = el('select');
   const searchEl =
     scope === 'character'
-      ? el('input', { type: 'text', class: 'search', placeholder: 'Buscar personaje...' })
+      ? el('input', { type: 'text', class: 'search', placeholder: t('search.placeholder') })
       : null;
 
   const listEl = el('div', { class: 'checklist' });
@@ -205,39 +335,39 @@ function buildScopePanel(kind, scope) {
       const label = el('label', { class: 'check' }, input, el('span', { class: 'name', text: n }));
       listEl.appendChild(label);
     }
-    if (!names.length) listEl.appendChild(el('div', { class: 'empty-hint', text: 'Sin resultados.' }));
+    if (!names.length) listEl.appendChild(el('div', { class: 'empty-hint', text: t('list.empty') }));
   }
 
-  const selectAllBtn = btn('Seleccionar todas', 'outline small', () => {
+  const selectAllBtn = btn(t('scope.selectAll'), 'outline small', () => {
     const q = (searchEl?.value || '').trim().toLowerCase();
     for (const n of Object.keys(checks)) if (!q || n.toLowerCase().includes(q)) checks[n].checked = true;
   });
-  const selectNoneBtn = btn('Deseleccionar todas', 'outline small', () => {
+  const selectNoneBtn = btn(t('scope.selectNone'), 'outline small', () => {
     for (const n of Object.keys(checks)) checks[n].checked = false;
   });
 
-  const runBtn = btn(`Enviar a los demás (${title.toLowerCase()})`, 'run', () => {
+  const runBtn = btn(t('scope.runBtn', { scope: title.toLowerCase() }), 'run', () => {
     const src = srcSelect.value;
     const dsts = Object.keys(checks).filter((n) => checks[n].checked && n !== src);
     if (!src || !dsts.length) {
-      snack('Elegí origen y al menos un destino distinto.');
+      snack(t('scope.noSelection'));
       return;
     }
-    confirm(`Se va a sobrescribir en: ${dsts.join(', ')}. ¿Seguir?`, () => doRun(src, dsts));
+    confirm(t('scope.overwrite', { dsts: dsts.join(', ') }), () => doRun(src, dsts));
   });
 
   async function doRun(src, dsts) {
-    await startProgress(dsts.length, `Enviando ${KIND_SHORT[kind]} a los demás...`);
+    await startProgress(dsts.length, t('scope.sending', { kind: kindLabel(kind) }));
     try {
       const lines = await invoke('run_sync', {
         jobType: kind, scope, wtfRoot: state.wtfRoot, src, dsts, settingsData: state.settings,
       });
       lines.forEach((l) => log(l));
-      log('Listo.');
-      finishProgress(true, `${KIND_SHORT[kind]} aplicados correctamente.`);
+      log(t('common.done'), 'log-ok');
+      finishProgress(true, t('scope.applied', { kind: kindLabel(kind) }));
     } catch (e) {
       log('ERROR: ' + e);
-      snack('Error: ' + e);
+      snack(t('common.error', { err: e }));
       finishProgress(false);
     }
   }
@@ -251,7 +381,7 @@ function buildScopePanel(kind, scope) {
       el(
         'div',
         { class: 'row' },
-        el('div', { class: 'field-label', text: `${KIND_SHORT[kind]} origen (main):` }),
+        el('div', { class: 'field-label', text: t('scope.sourceLabel', { kind: kindLabel(kind) }) }),
         srcSelect,
         searchEl
       ),
@@ -302,8 +432,8 @@ function buildAddonExclPanel() {
   return el(
     'div',
     { class: 'panel scope-panel' },
-    el('div', { class: 'field-label', text: 'Addons que NUNCA se copian (SavedVariables):' }),
-    el('div', { class: 'note-text', text: 'Se detectan escaneando la carpeta WTF cargada. Tildado = excluido.' }),
+    el('div', { class: 'field-label', text: t('addons.exclTitle') }),
+    el('div', { class: 'note-text', text: t('addons.exclNote') }),
     box
   );
 }
@@ -340,18 +470,18 @@ async function refreshAddonExcludes() {
     listEl.appendChild(cb);
   }
   if (!names.length)
-    listEl.appendChild(el('div', { class: 'empty-hint', text: 'Cargá una carpeta WTF para ver los addons detectados.' }));
+    listEl.appendChild(el('div', { class: 'empty-hint', text: t('addons.exclEmpty') }));
 }
 
 function buildConfigExclPanel() {
   const listEl = el('div', { class: 'checklist' });
   const all = [...ACCOUNT_CONFIG_FILES, ...CHARACTER_CONFIG_FILES];
-  for (const [fname, label] of all) {
+  for (const [fname] of all) {
     const cb = el(
       'label',
       { class: 'check excl' },
       el('input', { type: 'checkbox' }),
-      el('span', { class: 'name', text: `${label}  (${fname})` })
+      el('span', { class: 'name', text: `${configFileLabel(fname)}  (${fname})` })
     );
     const input = cb.querySelector('input');
     input.checked = state.settings.config_excludes.includes(fname);
@@ -369,11 +499,8 @@ function buildConfigExclPanel() {
   return el(
     'div',
     { class: 'panel scope-panel' },
-    el('div', { class: 'field-label', text: 'Archivos de configuración que NUNCA se copian:' }),
-    el('div', {
-      class: 'note-text',
-      text: 'Aplica tanto a nivel cuenta como personaje (si el archivo no corresponde a ese nivel, se ignora).',
-    }),
+    el('div', { class: 'field-label', text: t('configs.exclTitle') }),
+    el('div', { class: 'note-text', text: t('configs.exclNote') }),
     box
   );
 }
@@ -382,10 +509,7 @@ function buildBindingsNote() {
   return el(
     'div',
     { class: 'panel' },
-    el('div', {
-      class: 'note-text',
-      text: 'Los bindeos siempre se copian completos (bindings-cache.wtf), tanto a nivel cuenta como personaje según cómo tengas configurado "keybindings por personaje" en el juego. No hay exclusiones parciales acá.',
-    })
+    el('div', { class: 'note-text', text: t('bindings.note') })
   );
 }
 
@@ -400,7 +524,7 @@ function buildTemplatesTab() {
         'label',
         { class: 'check' },
         el('input', { type: 'checkbox' }),
-        el('span', { class: 'name', text: KIND_SHORT[kind] })
+        el('span', { class: 'name', text: kindLabel(kind) })
       );
       const input = cb.querySelector('input');
       state.scopeChecks[`${kind}_${scope}`] = input;
@@ -413,19 +537,19 @@ function buildTemplatesTab() {
     el(
       'div',
       { class: 'row' },
-      makeScopeColumn('account', 'Cuenta'),
+      makeScopeColumn('account', t('scope.account')),
       el('div', { class: 'v-divider' }),
-      makeScopeColumn('character', 'Personaje')
+      makeScopeColumn('character', t('scope.character'))
     )
   );
 
-  const nameField = el('input', { type: 'text', placeholder: 'Nombre de la plantilla', style: 'width:300px' });
+  const nameField = el('input', { type: 'text', placeholder: t('templates.namePlaceholder'), style: 'width:300px' });
 
   const backupCheck = el(
     'label',
     { class: 'check' },
     el('input', { type: 'checkbox' }),
-    el('span', { class: 'name', text: 'Hacer backup automático antes de aplicar' })
+    el('span', { class: 'name', text: t('templates.backupToggle') })
   );
   const backupInput = backupCheck.querySelector('input');
   backupInput.checked = !!state.settings.backup_enabled;
@@ -437,26 +561,26 @@ function buildTemplatesTab() {
   function saveTemplate() {
     const name = nameField.value.trim();
     if (!name) {
-      snack('Ponele un nombre a la plantilla.');
+      snack(t('templates.noName'));
       return;
     }
     const selected = Object.keys(state.scopeChecks).filter((k) => state.scopeChecks[k].checked);
     if (!selected.length) {
-      snack('Tildá al menos una sección (Addons, Configs o Bindeos) para esta plantilla.');
+      snack(t('templates.noSection'));
       return;
     }
     const { jobs, missing } = collectCurrentJobs(selected);
     if (!jobs.length) {
-      snack('Ninguna de las secciones tildadas tiene origen + destinos elegidos ahora mismo.');
+      snack(t('templates.noJobs'));
       return;
     }
-    state.settings.templates = state.settings.templates.filter((t) => t.name !== name);
+    state.settings.templates = state.settings.templates.filter((x) => x.name !== name);
     state.settings.templates.push({ name, jobs });
     saveSettings();
     nameField.value = '';
     refreshTemplates();
-    let msg = `Plantilla "${name}" guardada.`;
-    if (missing.length) msg += ` (sin datos, no incluidas: ${missing.join(', ')})`;
+    let msg = t('templates.saved', { name });
+    if (missing.length) msg += t('templates.missing', { list: missing.join(', ') });
     snack(msg, true);
   }
 
@@ -466,18 +590,12 @@ function buildTemplatesTab() {
     el(
       'div',
       { class: 'panel scope-panel' },
-      el('div', { class: 'field-label', text: 'Guardar la selección actual como plantilla', style: 'font-size:14px;font-weight:700' }),
-      el('div', {
-        class: 'note-text',
-        text: 'Elegí qué secciones incluir. Solo se guarda el origen/destino de las secciones tildadas acá, las demás quedan afuera aunque tengan algo tildado en su pestaña.',
-      }),
+      el('div', { class: 'field-label', text: t('templates.saveTitle'), style: 'font-size:14px;font-weight:700' }),
+      el('div', { class: 'note-text', text: t('templates.saveNote') }),
       el('div', { class: 'checklist-box', style: 'height:auto' }, scopeChecksRow),
-      el('div', { class: 'row' }, nameField, btn('Guardar plantilla actual', '', saveTemplate)),
+      el('div', { class: 'row' }, nameField, btn(t('templates.saveBtn'), '', saveTemplate)),
       el('div', { class: 'row' }, backupCheck),
-      el('div', {
-        class: 'note-text',
-        text: 'Antes de sobrescribir se guarda una copia de lo que había en la carpeta de configuración de la app (backups).',
-      })
+      el('div', { class: 'note-text', text: t('templates.backupNote') })
     )
   );
 
@@ -486,7 +604,7 @@ function buildTemplatesTab() {
   const right = el(
     'div',
     { class: 'templates-right' },
-    el('div', { class: 'field-label', text: 'Plantillas guardadas', style: 'color:var(--gold);font-size:15px;font-weight:700' }),
+    el('div', { class: 'field-label', text: t('templates.savedTitle'), style: 'color:var(--gold);font-size:15px;font-weight:700' }),
     templatesCol
   );
 
@@ -503,14 +621,14 @@ function collectCurrentJobs(selectedScopes) {
     const src = p.srcSelect.value;
     const dsts = Object.keys(p.checks).filter((n) => p.checks[n].checked && n !== src);
     if (src && dsts.length) jobs.push({ type: kind, scope, src, dsts });
-    else missing.push(SCOPE_LABELS[key]);
+    else missing.push(scopeLabel(kind, scope));
   }
   return { jobs, missing };
 }
 
 function applyJobs(jobs) {
   if (!state.wtfRoot) {
-    snack('Cargá la carpeta WTF primero.');
+    snack(t('wtf.loadFirst'));
     return false;
   }
   for (const key of Object.keys(state.panels)) {
@@ -533,10 +651,10 @@ function applyJobs(jobs) {
 async function runJobs(jobs) {
   const total = jobs.reduce((n, j) => n + j.dsts.length, 0);
   if (!total) {
-    snack('No hay destinos para ejecutar.');
+    snack(t('jobs.noDests'));
     return;
   }
-  await startProgress(total, `Aplicando plantilla (${jobs.length} sección${jobs.length === 1 ? '' : 'es'})...`);
+  await startProgress(total, t('jobs.applying', { count: jobs.length }));
   let hadError = false;
   try {
     for (const j of jobs) {
@@ -550,8 +668,8 @@ async function runJobs(jobs) {
         log('ERROR: ' + e);
       }
     }
-    log('Plantilla ejecutada.');
-    finishProgress(true, hadError ? 'Plantilla aplicada con errores. Revisá el Historial.' : 'Plantilla aplicada correctamente.');
+    log(t('jobs.done'), 'log-ok');
+    finishProgress(true, hadError ? t('jobs.withErrors') : t('jobs.ok'));
   } catch (e) {
     hadError = true;
     log('ERROR: ' + e);
@@ -561,22 +679,22 @@ async function runJobs(jobs) {
 
 function refreshTemplates() {
   const col = state.templatesColEl;
+  if (!col) return;
   col.textContent = '';
   for (const tpl of state.settings.templates) {
     const included = tpl.jobs
-      .map((j) => SCOPE_LABELS[`${j.type}_${j.scope}`] || `${j.type}/${j.scope}`)
+      .map((j) => scopeLabel(j.type, j.scope))
       .join(', ');
-    const applyBtn = btn('Aplicar', 'outline small', () => {
-      if (applyJobs(tpl.jobs))
-        snack(`Plantilla "${tpl.name}" aplicada. Revisá y ejecutá cada sección, o usá "Aplicar y ejecutar".`, true);
+    const applyBtn = btn(t('templates.apply'), 'outline small', () => {
+      if (applyJobs(tpl.jobs)) snack(t('templates.applied', { name: tpl.name }), true);
     });
-    const applyRunBtn = btn('Aplicar y ejecutar', 'small', () => {
+    const applyRunBtn = btn(t('templates.applyRun'), 'small', () => {
       if (applyJobs(tpl.jobs)) runJobs(tpl.jobs);
     });
     const delBtn = el('button', { class: 'icon-btn', text: '\u2715' });
-    delBtn.title = 'Eliminar';
+    delBtn.title = t('templates.delete');
     delBtn.onclick = () => {
-      state.settings.templates = state.settings.templates.filter((t) => t.name !== tpl.name);
+      state.settings.templates = state.settings.templates.filter((x) => x.name !== tpl.name);
       saveSettings();
       refreshTemplates();
     };
@@ -590,12 +708,12 @@ function refreshTemplates() {
           el('div', { class: 'tpl-name', text: tpl.name }),
           el('div', { class: 'tpl-btns' }, applyBtn, applyRunBtn, delBtn)
         ),
-        el('div', { class: 'tpl-included', text: included || '(sin secciones)' })
+        el('div', { class: 'tpl-included', text: included || t('templates.noSections') })
       )
     );
   }
   if (!state.settings.templates.length)
-    col.appendChild(el('div', { class: 'empty-hint', text: 'Todavía no guardaste ninguna plantilla.' }));
+    col.appendChild(el('div', { class: 'empty-hint', text: t('templates.empty') }));
 }
 
 // ================================================================ tabs
@@ -605,18 +723,18 @@ function buildKindTab(kind) {
   else if (kind === 'configs') exclPanel = buildConfigExclPanel();
   else exclPanel = buildBindingsNote();
   return makeTabs([
-    { label: 'Cuenta', element: buildScopePanel(kind, 'account') },
-    { label: 'Personaje', element: buildScopePanel(kind, 'character') },
-    { label: 'Exclusiones', element: exclPanel },
+    { label: t('scope.account'), element: buildScopePanel(kind, 'account') },
+    { label: t('scope.character'), element: buildScopePanel(kind, 'character') },
+    { label: t('tabs.exclusions'), element: exclPanel },
   ]);
 }
 
 function buildMainTabs() {
   return makeTabs([
-    { label: 'Plantillas', element: buildTemplatesTab() },
-    { label: 'Addons', element: buildKindTab('addons') },
-    { label: 'Configs', element: buildKindTab('configs') },
-    { label: 'Bindeos', element: buildKindTab('bindings') },
+    { label: t('tabs.templates'), element: buildTemplatesTab() },
+    { label: kindLabel('addons'), element: buildKindTab('addons') },
+    { label: kindLabel('configs'), element: buildKindTab('configs') },
+    { label: kindLabel('bindings'), element: buildKindTab('bindings') },
   ]);
 }
 
@@ -624,7 +742,7 @@ function buildMainTabs() {
 async function doReload() {
   const root = document.getElementById('wtfField').value.trim();
   if (!root) {
-    snack('Carpeta WTF inválida.');
+    snack(t('wtf.invalid'));
     return;
   }
   let valid = false;
@@ -634,7 +752,7 @@ async function doReload() {
     /* ignore */
   }
   if (!valid) {
-    snack('Carpeta WTF inválida.');
+    snack(t('wtf.invalid'));
     return;
   }
   const accounts = await invoke('list_accounts', { wtfRoot: root });
@@ -650,12 +768,12 @@ async function doReload() {
     refreshPanel(kind, scope);
   }
   await refreshAddonExcludes();
-  log(`Cargado: ${accounts.length} cuentas, ${chars.length} personajes.`);
+  log(t('wtf.loaded', { accounts: accounts.length, chars: chars.length }));
 }
 
 async function browse() {
   try {
-    const path = await window.__TAURI__.dialog.open({ directory: true, title: 'Seleccioná la carpeta WTF' });
+    const path = await window.__TAURI__.dialog.open({ directory: true, title: t('wtf.browseTitle') });
     if (path) {
       document.getElementById('wtfField').value = path;
       await doReload();
@@ -668,7 +786,7 @@ async function browse() {
 // ================================================================ init
 async function init() {
   if (!window.__TAURI__) {
-    document.body.textContent = 'Esta app debe ejecutarse dentro de Tauri.';
+    document.body.textContent = t('app.tauriOnly');
     return;
   }
 
@@ -679,12 +797,14 @@ async function init() {
     config_excludes: [],
     templates: [],
     backup_enabled: true,
+    lang: 'es',
   };
   try {
     const loaded = await invoke('get_settings');
     if (loaded && typeof loaded === 'object') {
       state.settings = loaded;
       if (state.settings.backup_enabled === undefined) state.settings.backup_enabled = true;
+      if (!state.settings.lang || !window.I18N[state.settings.lang]) state.settings.lang = 'es';
     }
   } catch (e) {
     console.error(e);
@@ -698,10 +818,19 @@ async function init() {
   document.getElementById('successOk').onclick = () =>
     document.getElementById('successOverlay').classList.add('hidden');
 
-  document.getElementById('mainTabs').appendChild(buildMainTabs());
+  document.getElementById('backupsBtn').onclick = async () => {
+    document.getElementById('backupsOverlay').classList.remove('hidden');
+    await refreshBackups();
+  };
+  document.getElementById('backupsClose').onclick = () =>
+    document.getElementById('backupsOverlay').classList.add('hidden');
+
+  document.querySelectorAll('.lang-btn').forEach((b) => {
+    b.onclick = () => setLang(b.dataset.lang);
+  });
 
   document.getElementById('wtfField').value = state.settings.wtf_root || '';
-  refreshTemplates();
+  applyLang();
   if (state.settings.wtf_root) await doReload();
 }
 

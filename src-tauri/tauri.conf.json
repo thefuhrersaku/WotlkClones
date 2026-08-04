@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "WotlkClones",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "identifier": "com.wotlkclones.app",
   "mainBinaryName": "WotlkClones",
   "build": {
@@ -44,8 +44,8 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
-        "languages": ["English", "Spanish"],
-        "displayLanguageSelector": false,
+        "languages": ["English", "Spanish", "Russian"],
+        "displayLanguageSelector": true,
         "installerIcon": "icons/icon.ico",
         "uninstallerIcon": "icons/icon.ico",
         "installerHooks": "./windows/hooks.nsh"
