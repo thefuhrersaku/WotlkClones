@@ -1,10 +1,13 @@
 use std::collections::BTreeSet;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::Serialize;
+use tauri::Manager;
 
-use crate::settings::{Job, JUNK_SUFFIXES, Settings};
+use crate::settings::{
+    Job, JUNK_SUFFIXES, Settings, ACCOUNT_CONFIG_FILES, BINDINGS_FILE, CHARACTER_CONFIG_FILES,
+};
 
 // ================================================================ utilidades
 pub fn clean_junk(dst_dir: &Path, log: &mut Vec<String>) {
@@ -199,6 +202,100 @@ fn collect_sv_names(sv: &Path, names: &mut BTreeSet<String>) {
             }
         }
     }
+}
+
+// ============================================================== backup
+fn dst_dir_for(wtf_root: &str, job: &Job, dst: &str) -> PathBuf {
+    if job.scope == "account" {
+        Path::new(wtf_root).join("Account").join(dst)
+    } else {
+        char_key_to_path(wtf_root, dst).map(PathBuf::from).unwrap_or_default()
+    }
+}
+
+fn backup_file(src: &Path, dst: &Path) {
+    if !src.is_file() {
+        return;
+    }
+    if let Some(parent) = dst.parent() {
+        if fs::create_dir_all(parent).is_err() {
+            return;
+        }
+    }
+    let _ = fs::copy(src, dst);
+}
+
+fn backup_savedvars(src: &Path, dst: &Path) {
+    if !src.is_dir() {
+        return;
+    }
+    if let Ok(entries) = fs::read_dir(src) {
+        for e in entries.flatten() {
+            if !e.path().is_file() {
+                continue;
+            }
+            let name = e.file_name().to_string_lossy().to_lowercase();
+            if JUNK_SUFFIXES.iter().any(|s| name.ends_with(s)) {
+                continue;
+            }
+            backup_file(&e.path(), &dst.join(e.file_name()));
+        }
+    }
+}
+
+/// Guarda una copia de lo que se va a sobrescribir en <app_config>/backups/backup_<ts>,
+/// manteniendo la estructura Account/... para que sea fácil de restaurar a mano.
+pub fn make_backup(
+    app: &tauri::AppHandle,
+    wtf_root: &str,
+    job: &Job,
+    s: &Settings,
+) -> Result<String, String> {
+    let root = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| e.to_string())?
+        .join("backups");
+    fs::create_dir_all(&root).map_err(|e| e.to_string())?;
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let backup_root = root.join(format!("backup_{}", ts));
+    fs::create_dir_all(&backup_root).map_err(|e| e.to_string())?;
+
+    for dst in &job.dsts {
+        let dst_dir = dst_dir_for(wtf_root, job, dst);
+        if dst_dir.as_os_str().is_empty() {
+            continue;
+        }
+        let Ok(rel) = dst_dir.strip_prefix(wtf_root) else {
+            continue;
+        };
+        let target = backup_root.join(rel);
+        match job.job_type.as_str() {
+            "addons" => backup_savedvars(
+                &dst_dir.join("SavedVariables"),
+                &target.join("SavedVariables"),
+            ),
+            "configs" => {
+                let list: &[(&str, &str)] = if job.scope == "character" {
+                    &CHARACTER_CONFIG_FILES
+                } else {
+                    &ACCOUNT_CONFIG_FILES
+                };
+                for (fname, _) in list {
+                    if s.config_excludes.iter().any(|x| x == fname) {
+                        continue;
+                    }
+                    backup_file(&dst_dir.join(fname), &target.join(fname));
+                }
+            }
+            "bindings" => backup_file(&dst_dir.join(BINDINGS_FILE), &target.join(BINDINGS_FILE)),
+            _ => {}
+        }
+    }
+    Ok(backup_root.display().to_string())
 }
 
 // ============================================================== sync

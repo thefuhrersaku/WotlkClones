@@ -69,6 +69,12 @@ pub struct Settings {
     pub addon_excludes: Vec<String>,
     pub config_excludes: Vec<String>,
     pub templates: Vec<Template>,
+    #[serde(default = "default_backup_enabled")]
+    pub backup_enabled: bool,
+}
+
+fn default_backup_enabled() -> bool {
+    true
 }
 
 impl Default for Settings {
@@ -79,6 +85,7 @@ impl Default for Settings {
             addon_excludes: DEFAULT_ADDON_EXCLUDES.iter().map(|s| s.to_string()).collect(),
             config_excludes: Vec::new(),
             templates: Vec::new(),
+            backup_enabled: true,
         }
     }
 }

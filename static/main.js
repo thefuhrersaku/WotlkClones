@@ -74,11 +74,24 @@ function snack(msg, ok = false) {
   snackTimer = setTimeout(() => sb.classList.add('hidden'), 3500);
 }
 
+function logClass(t) {
+  const s = t.trim();
+  if (/ERROR/i.test(s)) return 'log-error';
+  if (/^==.*==$/.test(s)) return 'log-head';
+  if (/^  /.test(s)) return 'log-dim';
+  if (/^(Listo|Plantilla ejecutada)/.test(s)) return 'log-ok';
+  return '';
+}
+
 function log(text) {
-  state.logLines.push(text);
   const lv = document.getElementById('logView');
-  lv.appendChild(el('div', { class: 'log-line', text }));
-  lv.scrollTop = lv.scrollHeight;
+  for (const part of String(text).split('\n')) {
+    if (!part.trim()) continue;
+    state.logLines.push(part);
+    const cls = logClass(part);
+    lv.appendChild(el('div', { class: 'log-line' + (cls ? ' ' + cls : ''), text: part }));
+    lv.scrollTop = lv.scrollHeight;
+  }
 }
 
 function confirm(msg, onYes) {
@@ -94,6 +107,50 @@ function confirm(msg, onYes) {
 
 function openHistory() {
   document.getElementById('historyOverlay').classList.remove('hidden');
+}
+
+// ================================================================ progreso
+let progressDone = 0;
+let progressTotal = 0;
+let progressUnlisten = null;
+
+function setProgressFill(frac) {
+  const fill = document.getElementById('progressFill');
+  fill.style.width = Math.round(Math.min(1, Math.max(0, frac)) * 100) + '%';
+}
+
+async function startProgress(total, title) {
+  progressDone = 0;
+  progressTotal = Math.max(total, 1);
+  document.getElementById('progressTitle').textContent = title;
+  document.getElementById('progressText').textContent = 'Preparando...';
+  setProgressFill(0);
+  document.getElementById('progressOverlay').classList.remove('hidden');
+  if (!progressUnlisten) {
+    try {
+      progressUnlisten = await window.__TAURI__.event.listen('sync-progress', (e) => {
+        const { done, current } = e.payload;
+        if (done > 0) progressDone = Math.min(progressDone + 1, progressTotal);
+        setProgressFill(progressDone / progressTotal);
+        if (current) document.getElementById('progressText').textContent = 'Copiando a: ' + current;
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+}
+
+function finishProgress(ok, msg) {
+  if (progressUnlisten) {
+    progressUnlisten();
+    progressUnlisten = null;
+  }
+  document.getElementById('progressOverlay').classList.add('hidden');
+  setProgressFill(0);
+  if (ok) {
+    document.getElementById('successText').textContent = msg;
+    document.getElementById('successOverlay').classList.remove('hidden');
+  }
 }
 
 function makeTabs(items) {
@@ -170,15 +227,18 @@ function buildScopePanel(kind, scope) {
   });
 
   async function doRun(src, dsts) {
+    await startProgress(dsts.length, `Enviando ${KIND_SHORT[kind]} a los demás...`);
     try {
       const lines = await invoke('run_sync', {
         jobType: kind, scope, wtfRoot: state.wtfRoot, src, dsts, settingsData: state.settings,
       });
       lines.forEach((l) => log(l));
       log('Listo.');
+      finishProgress(true, `${KIND_SHORT[kind]} aplicados correctamente.`);
     } catch (e) {
-      snack('Error: ' + e);
       log('ERROR: ' + e);
+      snack('Error: ' + e);
+      finishProgress(false);
     }
   }
 
@@ -361,6 +421,19 @@ function buildTemplatesTab() {
 
   const nameField = el('input', { type: 'text', placeholder: 'Nombre de la plantilla', style: 'width:300px' });
 
+  const backupCheck = el(
+    'label',
+    { class: 'check' },
+    el('input', { type: 'checkbox' }),
+    el('span', { class: 'name', text: 'Hacer backup automático antes de aplicar' })
+  );
+  const backupInput = backupCheck.querySelector('input');
+  backupInput.checked = !!state.settings.backup_enabled;
+  backupInput.onchange = () => {
+    state.settings.backup_enabled = backupInput.checked;
+    saveSettings();
+  };
+
   function saveTemplate() {
     const name = nameField.value.trim();
     if (!name) {
@@ -399,7 +472,12 @@ function buildTemplatesTab() {
         text: 'Elegí qué secciones incluir. Solo se guarda el origen/destino de las secciones tildadas acá, las demás quedan afuera aunque tengan algo tildado en su pestaña.',
       }),
       el('div', { class: 'checklist-box', style: 'height:auto' }, scopeChecksRow),
-      el('div', { class: 'row' }, nameField, btn('Guardar plantilla actual', '', saveTemplate))
+      el('div', { class: 'row' }, nameField, btn('Guardar plantilla actual', '', saveTemplate)),
+      el('div', { class: 'row' }, backupCheck),
+      el('div', {
+        class: 'note-text',
+        text: 'Antes de sobrescribir se guarda una copia de lo que había en la carpeta de configuración de la app (backups).',
+      })
     )
   );
 
@@ -453,17 +531,32 @@ function applyJobs(jobs) {
 }
 
 async function runJobs(jobs) {
-  for (const j of jobs) {
-    try {
-      const lines = await invoke('run_sync', {
-        jobType: j.type, scope: j.scope, wtfRoot: state.wtfRoot, src: j.src, dsts: j.dsts, settingsData: state.settings,
-      });
-      lines.forEach((l) => log(l));
-    } catch (e) {
-      log('ERROR: ' + e);
-    }
+  const total = jobs.reduce((n, j) => n + j.dsts.length, 0);
+  if (!total) {
+    snack('No hay destinos para ejecutar.');
+    return;
   }
-  log('Plantilla ejecutada.');
+  await startProgress(total, `Aplicando plantilla (${jobs.length} sección${jobs.length === 1 ? '' : 'es'})...`);
+  let hadError = false;
+  try {
+    for (const j of jobs) {
+      try {
+        const lines = await invoke('run_sync', {
+          jobType: j.type, scope: j.scope, wtfRoot: state.wtfRoot, src: j.src, dsts: j.dsts, settingsData: state.settings,
+        });
+        lines.forEach((l) => log(l));
+      } catch (e) {
+        hadError = true;
+        log('ERROR: ' + e);
+      }
+    }
+    log('Plantilla ejecutada.');
+    finishProgress(true, hadError ? 'Plantilla aplicada con errores. Revisá el Historial.' : 'Plantilla aplicada correctamente.');
+  } catch (e) {
+    hadError = true;
+    log('ERROR: ' + e);
+    finishProgress(false);
+  }
 }
 
 function refreshTemplates() {
@@ -585,10 +678,14 @@ async function init() {
     addon_excludes: ['ActionBarSaver'],
     config_excludes: [],
     templates: [],
+    backup_enabled: true,
   };
   try {
     const loaded = await invoke('get_settings');
-    if (loaded && typeof loaded === 'object') state.settings = loaded;
+    if (loaded && typeof loaded === 'object') {
+      state.settings = loaded;
+      if (state.settings.backup_enabled === undefined) state.settings.backup_enabled = true;
+    }
   } catch (e) {
     console.error(e);
   }
@@ -598,6 +695,8 @@ async function init() {
   document.getElementById('historyBtn').onclick = openHistory;
   document.getElementById('historyClose').onclick = () =>
     document.getElementById('historyOverlay').classList.add('hidden');
+  document.getElementById('successOk').onclick = () =>
+    document.getElementById('successOverlay').classList.add('hidden');
 
   document.getElementById('mainTabs').appendChild(buildMainTabs());
 

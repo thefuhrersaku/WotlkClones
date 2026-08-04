@@ -1,4 +1,5 @@
-use tauri::AppHandle;
+use serde::Serialize;
+use tauri::{AppHandle, Emitter};
 
 use crate::settings::{self, Settings};
 use crate::sync;
@@ -33,8 +34,16 @@ pub fn scan_all_addons(wtf_root: String) -> Vec<String> {
     sync::scan_all_addons(&wtf_root)
 }
 
+#[derive(Serialize, Clone)]
+pub struct SyncProgress {
+    pub done: u32,
+    pub total: u32,
+    pub current: String,
+}
+
 #[tauri::command]
 pub fn run_sync(
+    app: AppHandle,
     job_type: String,
     scope: String,
     wtf_root: String,
@@ -43,10 +52,43 @@ pub fn run_sync(
     settings_data: Settings,
 ) -> Vec<String> {
     let job = settings::Job {
-        job_type,
-        scope,
-        src,
-        dsts,
+        job_type: job_type.clone(),
+        scope: scope.clone(),
+        src: src.clone(),
+        dsts: dsts.clone(),
     };
-    sync::run(&job, &wtf_root, &settings_data)
+    let total = dsts.len() as u32;
+    let mut out = Vec::new();
+    let _ = app.emit(
+        "sync-progress",
+        SyncProgress {
+            done: 0,
+            total,
+            current: "Creando backup...".into(),
+        },
+    );
+    if settings_data.backup_enabled {
+        match sync::make_backup(&app, &wtf_root, &job, &settings_data) {
+            Ok(p) => out.push(format!("\n== Backup guardado en: {} ==", p)),
+            Err(e) => out.push(format!("\n== ERROR creando backup: {} ==", e)),
+        }
+    }
+    for (i, dst) in dsts.iter().enumerate() {
+        let one = settings::Job {
+            job_type: job_type.clone(),
+            scope: scope.clone(),
+            src: src.clone(),
+            dsts: vec![dst.clone()],
+        };
+        out.extend(sync::run(&one, &wtf_root, &settings_data));
+        let _ = app.emit(
+            "sync-progress",
+            SyncProgress {
+                done: (i + 1) as u32,
+                total,
+                current: dst.clone(),
+            },
+        );
+    }
+    out
 }
