@@ -793,7 +793,7 @@ async function init() {
   state.settings = {
     wtf_root: '',
     src: {},
-    addon_excludes: ['ActionBarSaver'],
+    addon_excludes: [],
     config_excludes: [],
     templates: [],
     backup_enabled: true,

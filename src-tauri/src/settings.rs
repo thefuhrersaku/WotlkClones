@@ -4,8 +4,6 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
-pub const DEFAULT_ADDON_EXCLUDES: [&str; 1] = ["ActionBarSaver"];
-
 pub const ACCOUNT_CONFIG_FILES: [(&str, &str); 2] = [
     ("config-cache.wtf", "Config general"),
     ("macros-cache.txt", "Macros"),
@@ -88,7 +86,7 @@ impl Default for Settings {
         Settings {
             wtf_root: String::new(),
             src: HashMap::new(),
-            addon_excludes: DEFAULT_ADDON_EXCLUDES.iter().map(|s| s.to_string()).collect(),
+            addon_excludes: Vec::new(),
             config_excludes: Vec::new(),
             templates: Vec::new(),
             backup_enabled: true,
