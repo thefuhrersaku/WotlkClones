@@ -19,6 +19,9 @@ const state = {
   charMap: {}, // "acc / realm / char" -> path
   panels: {},  // "kind_scope" -> {srcSelect, checks:{name:input}, listEl, searchEl, render}
   addonExclListEl: null,
+  addonExclSearchEl: null,
+  addonExclNames: [],
+  configExclListEl: null,
   scopeChecks: {},
   templatesColEl: null,
   logLines: [],
@@ -163,6 +166,7 @@ function rebuildTabs() {
     refreshPanel(kind, scope);
   }
   refreshTemplates();
+  refreshAddonExcludes();
 }
 
 // ================================================================ progreso
@@ -428,28 +432,38 @@ function refreshPanel(kind, scope) {
 function buildAddonExclPanel() {
   const listEl = el('div', { class: 'checklist' });
   const box = el('div', { class: 'checklist-box' }, listEl);
+  const searchEl = el('input', { type: 'text', class: 'search excl-search', placeholder: t('addons.exclSearch') });
+  searchEl.oninput = renderAddonExcludes;
   state.addonExclListEl = listEl;
+  state.addonExclSearchEl = searchEl;
   return el(
     'div',
     { class: 'panel scope-panel' },
     el('div', { class: 'field-label', text: t('addons.exclTitle') }),
     el('div', { class: 'note-text', text: t('addons.exclNote') }),
+    searchEl,
     box
   );
 }
 
 async function refreshAddonExcludes() {
-  const listEl = state.addonExclListEl;
-  if (!listEl) return;
-  listEl.textContent = '';
-  let names = [];
+  state.addonExclNames = [];
   if (state.wtfRoot) {
     try {
-      names = await invoke('scan_all_addons', { wtfRoot: state.wtfRoot });
+      state.addonExclNames = await invoke('scan_all_addons', { wtfRoot: state.wtfRoot });
     } catch (e) {
       /* ignore */
     }
   }
+  renderAddonExcludes();
+}
+
+function renderAddonExcludes() {
+  const listEl = state.addonExclListEl;
+  if (!listEl) return;
+  listEl.textContent = '';
+  const q = (state.addonExclSearchEl?.value || '').trim().toLowerCase();
+  const names = state.addonExclNames.filter((n) => (q ? n.toLowerCase().includes(q) : true));
   for (const name of names) {
     const cb = el(
       'label',
@@ -475,6 +489,22 @@ async function refreshAddonExcludes() {
 
 function buildConfigExclPanel() {
   const listEl = el('div', { class: 'checklist' });
+  const box = el('div', { class: 'checklist-box' }, listEl);
+  state.configExclListEl = listEl;
+  renderConfigExcludes();
+  return el(
+    'div',
+    { class: 'panel scope-panel' },
+    el('div', { class: 'field-label', text: t('configs.exclTitle') }),
+    el('div', { class: 'note-text', text: t('configs.exclNote') }),
+    box
+  );
+}
+
+function renderConfigExcludes() {
+  const listEl = state.configExclListEl;
+  if (!listEl) return;
+  listEl.textContent = '';
   const all = [...ACCOUNT_CONFIG_FILES, ...CHARACTER_CONFIG_FILES];
   for (const [fname] of all) {
     const cb = el(
@@ -495,14 +525,6 @@ function buildConfigExclPanel() {
     };
     listEl.appendChild(cb);
   }
-  const box = el('div', { class: 'checklist-box' }, listEl);
-  return el(
-    'div',
-    { class: 'panel scope-panel' },
-    el('div', { class: 'field-label', text: t('configs.exclTitle') }),
-    el('div', { class: 'note-text', text: t('configs.exclNote') }),
-    box
-  );
 }
 
 function buildBindingsNote() {
@@ -575,7 +597,14 @@ function buildTemplatesTab() {
       return;
     }
     state.settings.templates = state.settings.templates.filter((x) => x.name !== name);
-    state.settings.templates.push({ name, jobs });
+    state.settings.templates.push({
+      name,
+      jobs,
+      excludes: {
+        addon_excludes: [...state.settings.addon_excludes],
+        config_excludes: [...state.settings.config_excludes],
+      },
+    });
     saveSettings();
     nameField.value = '';
     refreshTemplates();
@@ -592,7 +621,7 @@ function buildTemplatesTab() {
       { class: 'panel scope-panel' },
       el('div', { class: 'field-label', text: t('templates.saveTitle'), style: 'font-size:14px;font-weight:700' }),
       el('div', { class: 'note-text', text: t('templates.saveNote') }),
-      el('div', { class: 'checklist-box', style: 'height:auto' }, scopeChecksRow),
+      el('div', { class: 'checklist-box', style: 'height:auto;min-height:190px' }, scopeChecksRow),
       el('div', { class: 'row' }, nameField, btn(t('templates.saveBtn'), '', saveTemplate)),
       el('div', { class: 'row' }, backupCheck),
       el('div', { class: 'note-text', text: t('templates.backupNote') })
@@ -624,6 +653,15 @@ function collectCurrentJobs(selectedScopes) {
     else missing.push(scopeLabel(kind, scope));
   }
   return { jobs, missing };
+}
+
+function applyTemplateExcludes(tpl) {
+  if (!tpl.excludes) return;
+  state.settings.addon_excludes = [...(tpl.excludes.addon_excludes || [])];
+  state.settings.config_excludes = [...(tpl.excludes.config_excludes || [])];
+  saveSettings();
+  renderAddonExcludes();
+  renderConfigExcludes();
 }
 
 function applyJobs(jobs) {
@@ -686,10 +724,16 @@ function refreshTemplates() {
       .map((j) => scopeLabel(j.type, j.scope))
       .join(', ');
     const applyBtn = btn(t('templates.apply'), 'outline small', () => {
-      if (applyJobs(tpl.jobs)) snack(t('templates.applied', { name: tpl.name }), true);
+      if (applyJobs(tpl.jobs)) {
+        applyTemplateExcludes(tpl);
+        snack(t('templates.applied', { name: tpl.name }), true);
+      }
     });
     const applyRunBtn = btn(t('templates.applyRun'), 'small', () => {
-      if (applyJobs(tpl.jobs)) runJobs(tpl.jobs);
+      if (applyJobs(tpl.jobs)) {
+        applyTemplateExcludes(tpl);
+        runJobs(tpl.jobs);
+      }
     });
     const delBtn = el('button', { class: 'icon-btn', text: '\u2715' });
     delBtn.title = t('templates.delete');

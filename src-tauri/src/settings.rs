@@ -43,11 +43,18 @@ impl Default for Job {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
+pub struct TemplateExcludes {
+    pub addon_excludes: Vec<String>,
+    pub config_excludes: Vec<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(default)]
 pub struct Template {
     pub name: String,
     pub jobs: Vec<Job>,
+    pub excludes: TemplateExcludes,
 }
 
 impl Default for Template {
@@ -55,6 +62,7 @@ impl Default for Template {
         Template {
             name: String::new(),
             jobs: Vec::new(),
+            excludes: TemplateExcludes::default(),
         }
     }
 }
