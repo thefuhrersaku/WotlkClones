@@ -47,6 +47,7 @@ impl Default for Job {
 pub struct TemplateExcludes {
     pub addon_excludes: Vec<String>,
     pub config_excludes: Vec<String>,
+    pub addon_only: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -73,12 +74,15 @@ pub struct Settings {
     pub wtf_root: String,
     pub src: HashMap<String, Option<String>>,
     pub addon_excludes: Vec<String>,
+    pub addon_only: Vec<String>,
     pub config_excludes: Vec<String>,
     pub templates: Vec<Template>,
     #[serde(default = "default_backup_enabled")]
     pub backup_enabled: bool,
     #[serde(default = "default_lang")]
     pub lang: String,
+    #[serde(default)]
+    pub hide_empty_characters: bool,
 }
 
 fn default_backup_enabled() -> bool {
@@ -95,10 +99,12 @@ impl Default for Settings {
             wtf_root: String::new(),
             src: HashMap::new(),
             addon_excludes: Vec::new(),
+            addon_only: Vec::new(),
             config_excludes: Vec::new(),
             templates: Vec::new(),
             backup_enabled: true,
             lang: "es".to_string(),
+            hide_empty_characters: false,
         }
     }
 }
