@@ -53,16 +53,28 @@ pub fn copy_replace(src_file: &Path, dst_dir: &Path, log: &mut Vec<String>) {
     }
 }
 
-pub fn is_excluded(filename: &str, excludes: &[String]) -> bool {
+/// Si `only` tiene elementos, ese addon se copia únicamente si está en `only`
+/// (las exclusiones se ignoran en ese caso). Si `only` está vacío, se usa el
+/// criterio normal de exclusiones.
+pub fn should_copy_addon(filename: &str, only: &[String], excludes: &[String]) -> bool {
     let base = Path::new(filename)
         .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or(filename)
         .to_lowercase();
-    excludes.iter().any(|x| x.to_lowercase() == base)
+    if !only.is_empty() {
+        return only.iter().any(|x| x.to_lowercase() == base);
+    }
+    !excludes.iter().any(|x| x.to_lowercase() == base)
 }
 
-fn copy_savedvariables(src_root: &Path, dst_root: &Path, excludes: &[String], log: &mut Vec<String>) {
+fn copy_savedvariables(
+    src_root: &Path,
+    dst_root: &Path,
+    only: &[String],
+    excludes: &[String],
+    log: &mut Vec<String>,
+) {
     let src_sv = src_root.join("SavedVariables");
     let dst_sv = dst_root.join("SavedVariables");
     if !src_sv.is_dir() {
@@ -79,8 +91,8 @@ fn copy_savedvariables(src_root: &Path, dst_root: &Path, excludes: &[String], lo
             if JUNK_SUFFIXES.iter().any(|s| name.ends_with(s)) {
                 continue;
             }
-            if is_excluded(&name, excludes) {
-                log.push(format!("  omitido (exclusión): {}", e.file_name().to_string_lossy()));
+            if !should_copy_addon(&name, only, excludes) {
+                log.push(format!("  omitido (exclusión/solo): {}", e.file_name().to_string_lossy()));
                 continue;
             }
             copy_replace(&e.path(), &dst_sv, log);
@@ -110,6 +122,20 @@ pub struct CharacterInfo {
     pub character: String,
     pub path: String,
     pub key: String,
+    pub has_activity: bool,
+}
+
+/// Un personaje se considera "sin actividad" (nunca se llegó a loguear de
+/// verdad, la carpeta quedó solo por reservar el nombre) si no tiene ningún
+/// SavedVariables, ni config-cache.wtf, ni chat.wtf.
+fn character_has_activity(char_path: &Path) -> bool {
+    let sv = char_path.join("SavedVariables");
+    let has_saved_vars = fs::read_dir(&sv)
+        .map(|mut entries| entries.next().is_some())
+        .unwrap_or(false);
+    has_saved_vars
+        || char_path.join("config-cache.wtf").is_file()
+        || char_path.join("chat.wtf").is_file()
 }
 
 pub fn list_characters(wtf_root: &str) -> Vec<CharacterInfo> {
@@ -139,6 +165,7 @@ pub fn list_characters(wtf_root: &str) -> Vec<CharacterInfo> {
                                 character: character.clone(),
                                 path: ch.path().to_string_lossy().to_string(),
                                 key: format!("{} / {} / {}", account, realm_name, character),
+                                has_activity: character_has_activity(&ch.path()),
                             });
                         }
                     }
@@ -411,7 +438,7 @@ fn sync_addons_account(wtf_root: &str, src: &str, dsts: &[String], s: &Settings,
     for dst in dsts {
         let dst_dir = Path::new(wtf_root).join("Account").join(dst);
         log.push(format!("\n== Addons cuenta: {} -> {} ==", src, dst));
-        copy_savedvariables(&src_dir, &dst_dir, &s.addon_excludes, log);
+        copy_savedvariables(&src_dir, &dst_dir, &s.addon_only, &s.addon_excludes, log);
     }
 }
 
@@ -423,7 +450,7 @@ fn sync_addons_character(wtf_root: &str, src: &str, dsts: &[String], s: &Setting
     let dsts_paths = char_paths_for_keys(wtf_root, dsts);
     for (dst_key, dst_path) in dsts_paths {
         log.push(format!("\n== Addons personaje: {} -> {} ==", src, dst_key));
-        copy_savedvariables(Path::new(&src_path), Path::new(&dst_path), &s.addon_excludes, log);
+        copy_savedvariables(Path::new(&src_path), Path::new(&dst_path), &s.addon_only, &s.addon_excludes, log);
     }
 }
 
