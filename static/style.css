@@ -441,6 +441,13 @@ label.check .name {
   justify-content: center;
   z-index: 50;
 }
+/* Estos se pueden abrir desde adentro de otro modal (ej. Backups → Restaurar),
+   así que siempre van por encima del resto. */
+#confirmOverlay,
+#progressOverlay,
+#successOverlay {
+  z-index: 60;
+}
 .modal {
   background: var(--panel-a);
   border: 1.4px solid var(--gold-dim);
