@@ -10,6 +10,7 @@ const CHARACTER_CONFIG_FILES = [
   ['macros-cache.txt', 'Macros'],
   ['layout-cache.txt', 'Layout de UI'],
   ['addons.txt', 'Lista de addons activados'],
+  ['chat.wtf', 'Configuración de chat'],
 ];
 
 const state = {
@@ -59,6 +60,7 @@ function configFileLabel(fname) {
     'macros-cache.txt': t('configFile.macros'),
     'layout-cache.txt': t('configFile.layout'),
     'addons.txt': t('configFile.addonList'),
+    'chat.wtf': t('configFile.chat'),
   };
   return map[fname] || fname;
 }
@@ -604,7 +606,12 @@ function renderConfigExcludes() {
   const listEl = state.configExclListEl;
   if (!listEl) return;
   listEl.textContent = '';
-  const all = [...ACCOUNT_CONFIG_FILES, ...CHARACTER_CONFIG_FILES];
+  const seen = new Set();
+  const all = [...ACCOUNT_CONFIG_FILES, ...CHARACTER_CONFIG_FILES].filter(([fname]) => {
+    if (seen.has(fname)) return false;
+    seen.add(fname);
+    return true;
+  });
   for (const [fname] of all) {
     const cb = el(
       'label',
