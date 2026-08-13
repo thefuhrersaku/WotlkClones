@@ -16,11 +16,14 @@ const state = {
   settings: null,
   wtfRoot: '',
   accounts: [],
-  charMap: {}, // "acc / realm / char" -> path
+  allChars: [],   // lista cruda de CharacterInfo (incluye has_activity)
+  charMap: {}, // "acc / realm / char" -> path (ya filtrado según hideEmptyChars)
   panels: {},  // "kind_scope" -> {srcSelect, checks:{name:input}, listEl, searchEl, render}
   addonExclListEl: null,
   addonExclSearchEl: null,
   addonExclNames: [],
+  addonOnlyListEl: null,
+  addonOnlySearchEl: null,
   configExclListEl: null,
   scopeChecks: {},
   templatesColEl: null,
@@ -456,6 +459,7 @@ async function refreshAddonExcludes() {
     }
   }
   renderAddonExcludes();
+  renderAddonOnly();
 }
 
 function renderAddonExcludes() {
@@ -478,6 +482,52 @@ function renderAddonExcludes() {
         if (!state.settings.addon_excludes.includes(name)) state.settings.addon_excludes.push(name);
       } else {
         state.settings.addon_excludes = state.settings.addon_excludes.filter((x) => x !== name);
+      }
+      saveSettings();
+    };
+    listEl.appendChild(cb);
+  }
+  if (!names.length)
+    listEl.appendChild(el('div', { class: 'empty-hint', text: t('addons.exclEmpty') }));
+}
+
+function buildAddonOnlyPanel() {
+  const listEl = el('div', { class: 'checklist' });
+  const box = el('div', { class: 'checklist-box' }, listEl);
+  const searchEl = el('input', { type: 'text', class: 'search excl-search', placeholder: t('addons.exclSearch') });
+  searchEl.oninput = renderAddonOnly;
+  state.addonOnlyListEl = listEl;
+  state.addonOnlySearchEl = searchEl;
+  return el(
+    'div',
+    { class: 'panel scope-panel' },
+    el('div', { class: 'field-label', text: t('addons.onlyTitle') }),
+    el('div', { class: 'note-text', text: t('addons.onlyNote') }),
+    searchEl,
+    box
+  );
+}
+
+function renderAddonOnly() {
+  const listEl = state.addonOnlyListEl;
+  if (!listEl) return;
+  listEl.textContent = '';
+  const q = (state.addonOnlySearchEl?.value || '').trim().toLowerCase();
+  const names = state.addonExclNames.filter((n) => (q ? n.toLowerCase().includes(q) : true));
+  for (const name of names) {
+    const cb = el(
+      'label',
+      { class: 'check' },
+      el('input', { type: 'checkbox' }),
+      el('span', { class: 'name', text: name })
+    );
+    const input = cb.querySelector('input');
+    input.checked = state.settings.addon_only.includes(name);
+    input.onchange = () => {
+      if (input.checked) {
+        if (!state.settings.addon_only.includes(name)) state.settings.addon_only.push(name);
+      } else {
+        state.settings.addon_only = state.settings.addon_only.filter((x) => x !== name);
       }
       saveSettings();
     };
@@ -602,6 +652,7 @@ function buildTemplatesTab() {
       jobs,
       excludes: {
         addon_excludes: [...state.settings.addon_excludes],
+        addon_only: [...state.settings.addon_only],
         config_excludes: [...state.settings.config_excludes],
       },
     });
@@ -658,9 +709,11 @@ function collectCurrentJobs(selectedScopes) {
 function applyTemplateExcludes(tpl) {
   if (!tpl.excludes) return;
   state.settings.addon_excludes = [...(tpl.excludes.addon_excludes || [])];
+  state.settings.addon_only = [...(tpl.excludes.addon_only || [])];
   state.settings.config_excludes = [...(tpl.excludes.config_excludes || [])];
   saveSettings();
   renderAddonExcludes();
+  renderAddonOnly();
   renderConfigExcludes();
 }
 
@@ -762,15 +815,19 @@ function refreshTemplates() {
 
 // ================================================================ tabs
 function buildKindTab(kind) {
-  let exclPanel;
-  if (kind === 'addons') exclPanel = buildAddonExclPanel();
-  else if (kind === 'configs') exclPanel = buildConfigExclPanel();
-  else exclPanel = buildBindingsNote();
-  return makeTabs([
+  const items = [
     { label: t('scope.account'), element: buildScopePanel(kind, 'account') },
     { label: t('scope.character'), element: buildScopePanel(kind, 'character') },
-    { label: t('tabs.exclusions'), element: exclPanel },
-  ]);
+  ];
+  if (kind === 'addons') {
+    items.push({ label: t('tabs.only'), element: buildAddonOnlyPanel() });
+    items.push({ label: t('tabs.exclusions'), element: buildAddonExclPanel() });
+  } else if (kind === 'configs') {
+    items.push({ label: t('tabs.exclusions'), element: buildConfigExclPanel() });
+  } else {
+    items.push({ label: t('tabs.exclusions'), element: buildBindingsNote() });
+  }
+  return makeTabs(items);
 }
 
 function buildMainTabs() {
@@ -803,8 +860,8 @@ async function doReload() {
   const chars = await invoke('list_characters', { wtfRoot: root });
   state.wtfRoot = root;
   state.accounts = accounts;
-  state.charMap = {};
-  for (const c of chars) state.charMap[c.key] = c.path;
+  state.allChars = chars;
+  rebuildCharMap();
   state.settings.wtf_root = root;
   saveSettings();
   for (const key of Object.keys(state.panels)) {
@@ -813,6 +870,14 @@ async function doReload() {
   }
   await refreshAddonExcludes();
   log(t('wtf.loaded', { accounts: accounts.length, chars: chars.length }));
+}
+
+function rebuildCharMap() {
+  state.charMap = {};
+  for (const c of state.allChars) {
+    if (state.settings.hide_empty_characters && !c.has_activity) continue;
+    state.charMap[c.key] = c.path;
+  }
 }
 
 async function browse() {
@@ -838,10 +903,12 @@ async function init() {
     wtf_root: '',
     src: {},
     addon_excludes: [],
+    addon_only: [],
     config_excludes: [],
     templates: [],
     backup_enabled: true,
     lang: 'es',
+    hide_empty_characters: false,
   };
   try {
     const loaded = await invoke('get_settings');
@@ -849,6 +916,8 @@ async function init() {
       state.settings = loaded;
       if (state.settings.backup_enabled === undefined) state.settings.backup_enabled = true;
       if (!state.settings.lang || !window.I18N[state.settings.lang]) state.settings.lang = 'es';
+      if (!Array.isArray(state.settings.addon_only)) state.settings.addon_only = [];
+      if (state.settings.hide_empty_characters === undefined) state.settings.hide_empty_characters = false;
     }
   } catch (e) {
     console.error(e);
@@ -872,6 +941,18 @@ async function init() {
   document.querySelectorAll('.lang-btn').forEach((b) => {
     b.onclick = () => setLang(b.dataset.lang);
   });
+
+  const hideEmptyChk = document.getElementById('hideEmptyChars');
+  hideEmptyChk.checked = !!state.settings.hide_empty_characters;
+  hideEmptyChk.onchange = () => {
+    state.settings.hide_empty_characters = hideEmptyChk.checked;
+    saveSettings();
+    rebuildCharMap();
+    for (const key of Object.keys(state.panels)) {
+      const [kind, scope] = key.split('_');
+      if (scope === 'character') refreshPanel(kind, scope);
+    }
+  };
 
   document.getElementById('wtfField').value = state.settings.wtf_root || '';
   applyLang();
