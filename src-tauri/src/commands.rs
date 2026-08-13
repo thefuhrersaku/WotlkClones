@@ -49,6 +49,17 @@ pub fn delete_backup(backup_path: String) -> Result<(), String> {
     sync::delete_backup(&backup_path)
 }
 
+#[tauri::command]
+pub fn open_backups_folder(app: AppHandle) -> Result<(), String> {
+    let root = sync::backups_root(&app);
+    std::fs::create_dir_all(&root).map_err(|e| e.to_string())?;
+    std::process::Command::new("explorer")
+        .arg(root)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[derive(Serialize, Clone)]
 pub struct SyncProgress {
     pub done: u32,
