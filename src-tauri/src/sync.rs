@@ -272,6 +272,39 @@ fn backup_savedvars(src: &Path, dst: &Path) {
 
 /// Guarda una copia de lo que se va a sobrescribir en <app_config>/backups/backup_<ts>,
 /// manteniendo la estructura Account/... para que sea fácil de restaurar a mano.
+pub const BACKUP_RETENTION_DAYS: u64 = 7;
+const MS_PER_DAY: u64 = 24 * 60 * 60 * 1000;
+
+/// Borra las carpetas de backup (backup_<timestamp_ms>) más viejas que
+/// BACKUP_RETENTION_DAYS. Devuelve cuántas borró.
+pub fn prune_old_backups(app: &tauri::AppHandle) -> u64 {
+    let root = backups_root(app);
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    let max_age_ms = BACKUP_RETENTION_DAYS * MS_PER_DAY;
+    let mut removed = 0u64;
+    if let Ok(entries) = fs::read_dir(&root) {
+        for e in entries.flatten() {
+            if !e.path().is_dir() {
+                continue;
+            }
+            let name = e.file_name().to_string_lossy().to_string();
+            let Some(ts) = name.strip_prefix("backup_").and_then(|n| n.parse::<u64>().ok()) else {
+                continue;
+            };
+            let age = now_ms.saturating_sub(ts);
+            if age > max_age_ms {
+                if fs::remove_dir_all(e.path()).is_ok() {
+                    removed += 1;
+                }
+            }
+        }
+    }
+    removed
+}
+
 pub fn make_backup(
     app: &tauri::AppHandle,
     wtf_root: &str,
@@ -322,6 +355,7 @@ pub fn make_backup(
             _ => {}
         }
     }
+    prune_old_backups(app);
     Ok(backup_root.display().to_string())
 }
 
@@ -356,6 +390,7 @@ pub fn backups_root(app: &tauri::AppHandle) -> std::path::PathBuf {
 }
 
 pub fn list_backups(app: &tauri::AppHandle) -> Vec<BackupInfo> {
+    prune_old_backups(app);
     let mut out = Vec::new();
     if let Ok(entries) = fs::read_dir(backups_root(app)) {
         for e in entries.flatten() {
