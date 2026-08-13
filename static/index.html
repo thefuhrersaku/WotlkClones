@@ -79,6 +79,13 @@
     <div class="modal wide">
       <div class="modal-title">❖&nbsp;&nbsp;<span data-i18n="backups.title">Backups</span>&nbsp;&nbsp;❖</div>
       <div class="note-text" data-i18n="backups.note"></div>
+      <div class="row backups-bulk-row">
+        <button id="backupsOpenFolder" class="btn outline small">📁 <span data-i18n="backups.openFolder">Abrir carpeta</span></button>
+        <div class="spacer"></div>
+        <button id="backupsSelectAll" class="btn outline small" data-i18n="scope.selectAll">Seleccionar todas</button>
+        <button id="backupsSelectNone" class="btn outline small" data-i18n="scope.selectNone">Deseleccionar todas</button>
+        <button id="backupsDeleteSelected" class="btn danger small" data-i18n="backups.deleteSelected">Eliminar seleccionados</button>
+      </div>
       <div class="backup-list" id="backupsList"></div>
       <div class="modal-actions">
         <button id="backupsClose" class="btn outline" data-i18n="backups.close">Cerrar</button>
