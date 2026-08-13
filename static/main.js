@@ -1,317 +1,1022 @@
-// WOTLK Clones - i18n (es / en / ru)
-window.I18N = {
-  es: {
-    'app.subtitle': 'Wrath of the Lich King · cliente 3.3.5a',
-    'wtf.placeholder': 'Carpeta WTF',
-    'wtf.browse': 'Buscar...',
-    'wtf.load': 'Cargar',
-    'wtf.history': 'Historial',
-    'wtf.backups': 'Backups',
-    'confirm.title': 'Confirmar',
-    'confirm.cancel': 'Cancelar',
-    'confirm.ok': 'Confirmar',
-    'progress.title': 'Aplicando...',
-    'progress.preparing': 'Preparando...',
-    'progress.copyingTo': 'Copiando a: {dst}',
-    'success.title': 'Aplicada',
-    'success.ok': 'Ok',
-    'history.title': 'Historial',
-    'history.close': 'Cerrar',
-    'backups.title': 'Backups',
-    'backups.note': 'Cada vez que aplicás una plantilla o enviás a los demás se guarda un backup automático. Elegí uno y toca "Restaurar" para volver a esa configuración. Los backups de más de 7 días se borran solos.',
-    'backups.close': 'Cerrar',
-    'backups.openFolder': 'Abrir carpeta',
-    'backups.deleteSelected': 'Eliminar seleccionados',
-    'backups.deleteSelectedConfirm': '¿Eliminar {count} backup(s) seleccionados? No se puede deshacer.',
-    'backups.noneSelected': 'Tildá al menos un backup.',
-    'backups.deletedBulk': '{count} backup(s) eliminados.',
-    'backups.deletedBulkErrors': '{ok} eliminados, {failed} con error.',
-    'kind.addons': 'Addons',
-    'kind.configs': 'Configs',
-    'kind.bindings': 'Bindeos',
-    'scope.account': 'Cuenta',
-    'scope.character': 'Personaje',
-    'scope.accountDst': 'Cuentas destino:',
-    'scope.characterDst': 'Personajes destino:',
-    'search.placeholder': 'Buscar personaje...',
-    'scope.selectAll': 'Seleccionar todas',
-    'scope.selectNone': 'Deseleccionar todas',
-    'scope.runBtn': 'Enviar a los demás ({scope})',
-    'scope.noSelection': 'Elegí origen y al menos un destino distinto.',
-    'scope.overwrite': 'Se va a sobrescribir en: {dsts}. ¿Seguir?',
-    'scope.sending': 'Enviando {kind} a los demás...',
-    'common.done': 'Listo.',
-    'common.error': 'Error: {err}',
-    'scope.applied': '{kind} aplicados correctamente.',
-    'list.empty': 'Sin resultados.',
-    'scope.sourceLabel': '{kind} origen (main):',
-    'addons.exclTitle': 'Addons que NUNCA se copian (SavedVariables):',
-    'addons.exclNote': 'Se detectan escaneando la carpeta WTF cargada. Tildado = excluido. Si hay algo tildado en "Solo", esta lista se ignora.',
-    'addons.exclEmpty': 'Cargá una carpeta WTF para ver los addons detectados.',
-    'addons.exclSearch': 'Buscar addons...',
-    'addons.onlyTitle': 'Solo estos addons se copian (SavedVariables):',
-    'addons.onlyNote': 'Si tildás algo acá, ÚNICAMENTE esos addons se copian y las Exclusiones se ignoran mientras haya algo tildado en esta lista.',
-    'tabs.only': 'Solo',
-    'wtf.hideEmptyChars': 'Ocultar personajes sin actividad',
-    'configs.exclTitle': 'Archivos de configuración que NUNCA se copian:',
-    'configs.exclNote': 'Aplica tanto a nivel cuenta como personaje (si el archivo no corresponde a ese nivel, se ignora).',
-    'bindings.note': 'Los bindeos siempre se copian completos (bindings-cache.wtf), tanto a nivel cuenta como personaje según cómo tengas configurado "keybindings por personaje" en el juego. No hay exclusiones parciales acá.',
-    'configFile.general': 'Config general',
-    'configFile.macros': 'Macros',
-    'configFile.layout': 'Layout de UI',
-    'configFile.addonList': 'Lista de addons activados',
-    'configFile.chat': 'Configuración de chat',
-    'templates.saveTitle': 'Guardar la selección actual como plantilla',
-    'templates.saveNote': 'Elegí qué secciones incluir. Solo se guarda el origen/destino de las secciones tildadas acá, las demás quedan afuera aunque tengan algo tildado en su pestaña.',
-    'templates.namePlaceholder': 'Nombre de la plantilla',
-    'templates.saveBtn': 'Guardar plantilla actual',
-    'templates.backupToggle': 'Hacer backup automático antes de aplicar',
-    'templates.backupNote': 'Antes de sobrescribir se guarda una copia de lo que había en la carpeta de configuración de la app (backups).',
-    'templates.savedTitle': 'Plantillas guardadas',
-    'templates.noName': 'Ponele un nombre a la plantilla.',
-    'templates.noSection': 'Tildá al menos una sección (Addons, Configs o Bindeos) para esta plantilla.',
-    'templates.noJobs': 'Ninguna de las secciones tildadas tiene origen + destinos elegidos ahora mismo.',
-    'templates.saved': 'Plantilla "{name}" guardada.',
-    'templates.missing': ' (sin datos, no incluidas: {list})',
-    'templates.apply': 'Aplicar',
-    'templates.applyRun': 'Aplicar y ejecutar',
-    'templates.delete': 'Eliminar',
-    'templates.applied': 'Plantilla "{name}" aplicada. Revisá y ejecutá cada sección, o usá "Aplicar y ejecutar".',
-    'templates.noSections': '(sin secciones)',
-    'templates.empty': 'Todavía no guardaste ninguna plantilla.',
-    'tabs.templates': 'Plantillas',
-    'tabs.exclusions': 'Exclusiones',
-    'wtf.invalid': 'Carpeta WTF inválida.',
-    'wtf.loaded': 'Cargado: {accounts} cuentas, {chars} personajes.',
-    'wtf.browseTitle': 'Seleccioná la carpeta WTF',
-    'wtf.loadFirst': 'Cargá la carpeta WTF primero.',
-    'jobs.noDests': 'No hay destinos para ejecutar.',
-    'jobs.applying': 'Aplicando plantilla ({count} secciones)...',
-    'jobs.done': 'Plantilla ejecutada.',
-    'jobs.withErrors': 'Plantilla aplicada con errores. Revisá el Historial.',
-    'jobs.ok': 'Plantilla aplicada correctamente.',
-    'backups.noBackups': 'Todavía no hay backups. Se crean solos al aplicar una plantilla o enviar configuraciones.',
-    'backups.readError': 'Error al leer los backups: {err}',
-    'backups.accounts': 'Cuentas: {list} · Archivos: {files}',
-    'backups.files': 'Archivos: {files}',
-    'backups.restore': 'Restaurar',
-    'backups.delete': 'Eliminar',
-    'backups.restoreConfirm': '¿Restaurar el backup del {date}? Se van a sobrescribir las configuraciones actuales.',
-    'backups.deleteConfirm': '¿Eliminar el backup del {date}? No se puede deshacer.',
-    'backups.restoring': 'Restaurando backup...',
-    'backups.restoredLog': 'Restauración completa.',
-    'backups.restored': 'Configuración restaurada correctamente.',
-    'backups.deleted': 'Backup eliminado.',
-    'app.tauriOnly': 'Esta app debe ejecutarse dentro de Tauri.',
-  },
+// WOTLK Clones - Config Sync 3.3.5a (Tauri 2)
+const KINDS = ['addons', 'configs', 'bindings'];
 
-  en: {
-    'app.subtitle': 'Wrath of the Lich King · client 3.3.5a',
-    'wtf.placeholder': 'WTF folder',
-    'wtf.browse': 'Browse...',
-    'wtf.load': 'Load',
-    'wtf.history': 'History',
-    'wtf.backups': 'Backups',
-    'confirm.title': 'Confirm',
-    'confirm.cancel': 'Cancel',
-    'confirm.ok': 'Confirm',
-    'progress.title': 'Applying...',
-    'progress.preparing': 'Preparing...',
-    'progress.copyingTo': 'Copying to: {dst}',
-    'success.title': 'Done',
-    'success.ok': 'OK',
-    'history.title': 'History',
-    'history.close': 'Close',
-    'backups.title': 'Backups',
-    'backups.note': 'A backup is created automatically every time you apply a template or send configs. Pick one and hit "Restore" to go back to that configuration. Backups older than 7 days are deleted automatically.',
-    'backups.close': 'Close',
-    'backups.openFolder': 'Open folder',
-    'backups.deleteSelected': 'Delete selected',
-    'backups.deleteSelectedConfirm': 'Delete {count} selected backup(s)? This cannot be undone.',
-    'backups.noneSelected': 'Check at least one backup.',
-    'backups.deletedBulk': '{count} backup(s) deleted.',
-    'backups.deletedBulkErrors': '{ok} deleted, {failed} failed.',
-    'kind.addons': 'Addons',
-    'kind.configs': 'Configs',
-    'kind.bindings': 'Keybinds',
-    'scope.account': 'Account',
-    'scope.character': 'Character',
-    'scope.accountDst': 'Destination accounts:',
-    'scope.characterDst': 'Destination characters:',
-    'search.placeholder': 'Search character...',
-    'scope.selectAll': 'Select all',
-    'scope.selectNone': 'Select none',
-    'scope.runBtn': 'Send to others ({scope})',
-    'scope.noSelection': 'Pick a source and at least one different destination.',
-    'scope.overwrite': 'Will overwrite: {dsts}. Continue?',
-    'scope.sending': 'Sending {kind} to the others...',
-    'common.done': 'Done.',
-    'common.error': 'Error: {err}',
-    'scope.applied': '{kind} applied successfully.',
-    'list.empty': 'No results.',
-    'scope.sourceLabel': '{kind} source (main):',
-    'addons.exclTitle': 'Addons that are NEVER copied (SavedVariables):',
-    'addons.exclNote': 'Detected by scanning the loaded WTF folder. Checked = excluded. If anything is checked under "Only", this list is ignored.',
-    'addons.exclEmpty': 'Load a WTF folder to see the detected addons.',
-    'addons.exclSearch': 'Search addons...',
-    'addons.onlyTitle': 'Only these addons are copied (SavedVariables):',
-    'addons.onlyNote': 'If you check anything here, ONLY those addons get copied, and Exclusions are ignored while this list has anything checked.',
-    'tabs.only': 'Only',
-    'wtf.hideEmptyChars': 'Hide characters with no activity',
-    'configs.exclTitle': 'Config files that are NEVER copied:',
-    'configs.exclNote': 'Applies at both account and character level (if the file doesn\'t belong to that level, it\'s ignored).',
-    'bindings.note': 'Keybinds are always copied in full (bindings-cache.wtf), at both account and character level depending on your "keybindings per character" game setting. No partial exclusions here.',
-    'configFile.general': 'General config',
-    'configFile.macros': 'Macros',
-    'configFile.layout': 'UI layout',
-    'configFile.addonList': 'Enabled addons list',
-    'configFile.chat': 'Chat settings',
-    'templates.saveTitle': 'Save current selection as a template',
-    'templates.saveNote': 'Choose which sections to include. Only the source/destinations of the checked sections are saved; the rest stays out even if something is checked on its tab.',
-    'templates.namePlaceholder': 'Template name',
-    'templates.saveBtn': 'Save current template',
-    'templates.backupToggle': 'Create backup automatically before applying',
-    'templates.backupNote': 'Before overwriting, a copy of what was there is saved to the app\'s config folder (backups).',
-    'templates.savedTitle': 'Saved templates',
-    'templates.noName': 'Give the template a name.',
-    'templates.noSection': 'Check at least one section (Addons, Configs or Keybinds) for this template.',
-    'templates.noJobs': 'None of the checked sections have a source + destinations right now.',
-    'templates.saved': 'Template "{name}" saved.',
-    'templates.missing': ' (no data, not included: {list})',
-    'templates.apply': 'Apply',
-    'templates.applyRun': 'Apply and run',
-    'templates.delete': 'Delete',
-    'templates.applied': 'Template "{name}" applied. Review and run each section, or use "Apply and run".',
-    'templates.noSections': '(no sections)',
-    'templates.empty': 'You haven\'t saved any templates yet.',
-    'tabs.templates': 'Templates',
-    'tabs.exclusions': 'Exclusions',
-    'wtf.invalid': 'Invalid WTF folder.',
-    'wtf.loaded': 'Loaded: {accounts} accounts, {chars} characters.',
-    'wtf.browseTitle': 'Select the WTF folder',
-    'wtf.loadFirst': 'Load the WTF folder first.',
-    'jobs.noDests': 'No destinations to run.',
-    'jobs.applying': 'Applying template ({count} sections)...',
-    'jobs.done': 'Template executed.',
-    'jobs.withErrors': 'Template applied with errors. Check the History.',
-    'jobs.ok': 'Template applied successfully.',
-    'backups.noBackups': 'No backups yet. They\'re created automatically when applying a template or sending configs.',
-    'backups.readError': 'Error reading backups: {err}',
-    'backups.accounts': 'Accounts: {list} · Files: {files}',
-    'backups.files': 'Files: {files}',
-    'backups.restore': 'Restore',
-    'backups.delete': 'Delete',
-    'backups.restoreConfirm': 'Restore the backup from {date}? Current configs will be overwritten.',
-    'backups.deleteConfirm': 'Delete the backup from {date}? This cannot be undone.',
-    'backups.restoring': 'Restoring backup...',
-    'backups.restoredLog': 'Restore complete.',
-    'backups.restored': 'Configuration restored successfully.',
-    'backups.deleted': 'Backup deleted.',
-    'app.tauriOnly': 'This app must run inside Tauri.',
-  },
+const ACCOUNT_CONFIG_FILES = [
+  ['config-cache.wtf', 'Config general'],
+  ['macros-cache.txt', 'Macros'],
+];
+const CHARACTER_CONFIG_FILES = [
+  ['config-cache.wtf', 'Config general'],
+  ['macros-cache.txt', 'Macros'],
+  ['layout-cache.txt', 'Layout de UI'],
+  ['addons.txt', 'Lista de addons activados'],
+  ['chat.wtf', 'Configuración de chat'],
+];
 
-  ru: {
-    'app.subtitle': 'Wrath of the Lich King · клиент 3.3.5a',
-    'wtf.placeholder': 'Папка WTF',
-    'wtf.browse': 'Обзор...',
-    'wtf.load': 'Загрузить',
-    'wtf.history': 'История',
-    'wtf.backups': 'Резервные копии',
-    'confirm.title': 'Подтверждение',
-    'confirm.cancel': 'Отмена',
-    'confirm.ok': 'Подтвердить',
-    'progress.title': 'Применение...',
-    'progress.preparing': 'Подготовка...',
-    'progress.copyingTo': 'Копирование в: {dst}',
-    'success.title': 'Готово',
-    'success.ok': 'ОК',
-    'history.title': 'История',
-    'history.close': 'Закрыть',
-    'backups.title': 'Резервные копии',
-    'backups.note': 'При применении шаблона или отправке конфигураций автоматически создаётся резервная копия. Выберите одну и нажмите «Восстановить», чтобы вернуться к этой конфигурации. Резервные копии старше 7 дней удаляются автоматически.',
-    'backups.close': 'Закрыть',
-    'backups.openFolder': 'Открыть папку',
-    'backups.deleteSelected': 'Удалить выбранные',
-    'backups.deleteSelectedConfirm': 'Удалить {count} выбранных резервных копий? Это действие нельзя отменить.',
-    'backups.noneSelected': 'Отметьте хотя бы одну резервную копию.',
-    'backups.deletedBulk': 'Удалено резервных копий: {count}.',
-    'backups.deletedBulkErrors': 'Удалено: {ok}, с ошибкой: {failed}.',
-    'kind.addons': 'Аддоны',
-    'kind.configs': 'Конфиги',
-    'kind.bindings': 'Бинды',
-    'scope.account': 'Аккаунт',
-    'scope.character': 'Персонаж',
-    'scope.accountDst': 'Целевые аккаунты:',
-    'scope.characterDst': 'Целевые персонажи:',
-    'search.placeholder': 'Поиск персонажа...',
-    'scope.selectAll': 'Выбрать все',
-    'scope.selectNone': 'Снять выделение',
-    'scope.runBtn': 'Отправить остальным ({scope})',
-    'scope.noSelection': 'Выберите источник и хотя бы один целевой объект.',
-    'scope.overwrite': 'Будут перезаписаны: {dsts}. Продолжить?',
-    'scope.sending': 'Отправка {kind} остальным...',
-    'common.done': 'Готово.',
-    'common.error': 'Ошибка: {err}',
-    'scope.applied': '{kind} применены успешно.',
-    'list.empty': 'Нет результатов.',
-    'scope.sourceLabel': 'Источник {kind} (main):',
-    'addons.exclTitle': 'Аддоны, которые НИКОГДА не копируются (SavedVariables):',
-    'addons.exclNote': 'Обнаруживаются при сканировании загруженной папки WTF. Отмечено = исключено. Если в разделе «Только» что-то отмечено, этот список игнорируется.',
-    'addons.exclEmpty': 'Загрузите папку WTF, чтобы увидеть обнаруженные аддоны.',
-    'addons.exclSearch': 'Поиск аддонов...',
-    'addons.onlyTitle': 'Копируются ТОЛЬКО эти аддоны (SavedVariables):',
-    'addons.onlyNote': 'Если здесь что-то отмечено, копируются ТОЛЬКО эти аддоны, а раздел «Исключения» игнорируется, пока в этом списке есть отметки.',
-    'tabs.only': 'Только',
-    'wtf.hideEmptyChars': 'Скрыть персонажей без активности',
-    'configs.exclTitle': 'Файлы конфигурации, которые НИКОГДА не копируются:',
-    'configs.exclNote': 'Применяется и к аккаунту, и к персонажу (если файл не подходит для этого уровня, он игнорируется).',
-    'bindings.note': 'Бинды всегда копируются целиком (bindings-cache.wtf) и на уровне аккаунта, и на уровне персонажа, в зависимости от настройки «keybindings per character» в игре. Частичных исключений здесь нет.',
-    'configFile.general': 'Общая конфигурация',
-    'configFile.macros': 'Макросы',
-    'configFile.layout': 'Раскладка интерфейса',
-    'configFile.addonList': 'Список включённых аддонов',
-    'configFile.chat': 'Настройки чата',
-    'templates.saveTitle': 'Сохранить текущий выбор как шаблон',
-    'templates.saveNote': 'Выберите, какие разделы включить. Сохраняются только источник и цели отмеченных здесь разделов; остальные остаются вне шаблона, даже если что-то отмечено на их вкладке.',
-    'templates.namePlaceholder': 'Название шаблона',
-    'templates.saveBtn': 'Сохранить текущий шаблон',
-    'templates.backupToggle': 'Создавать резервную копию перед применением',
-    'templates.backupNote': 'Перед перезаписью сохраняется копия того, что было, в папке конфигурации приложения (backups).',
-    'templates.savedTitle': 'Сохранённые шаблоны',
-    'templates.noName': 'Укажите название шаблона.',
-    'templates.noSection': 'Отметьте хотя бы один раздел (Аддоны, Конфиги или Бинды) для этого шаблона.',
-    'templates.noJobs': 'Ни у одного из отмеченных разделов сейчас нет источника и целей.',
-    'templates.saved': 'Шаблон «{name}» сохранён.',
-    'templates.missing': ' (нет данных, не включено: {list})',
-    'templates.apply': 'Применить',
-    'templates.applyRun': 'Применить и выполнить',
-    'templates.delete': 'Удалить',
-    'templates.applied': 'Шаблон «{name}» применён. Проверьте каждый раздел или используйте «Применить и выполнить».',
-    'templates.noSections': '(без разделов)',
-    'templates.empty': 'Вы ещё не сохранили ни одного шаблона.',
-    'tabs.templates': 'Шаблоны',
-    'tabs.exclusions': 'Исключения',
-    'wtf.invalid': 'Неверная папка WTF.',
-    'wtf.loaded': 'Загружено: {accounts} аккаунтов, {chars} персонажей.',
-    'wtf.browseTitle': 'Выберите папку WTF',
-    'wtf.loadFirst': 'Сначала загрузите папку WTF.',
-    'jobs.noDests': 'Нет целевых объектов для выполнения.',
-    'jobs.applying': 'Применение шаблона ({count} разделов)...',
-    'jobs.done': 'Шаблон выполнен.',
-    'jobs.withErrors': 'Шаблон применён с ошибками. Проверьте историю.',
-    'jobs.ok': 'Шаблон применён успешно.',
-    'backups.noBackups': 'Пока нет резервных копий. Они создаются автоматически при применении шаблона или отправке конфигураций.',
-    'backups.readError': 'Ошибка чтения резервных копий: {err}',
-    'backups.accounts': 'Аккаунты: {list} · Файлов: {files}',
-    'backups.files': 'Файлов: {files}',
-    'backups.restore': 'Восстановить',
-    'backups.delete': 'Удалить',
-    'backups.restoreConfirm': 'Восстановить копию от {date}? Текущие конфигурации будут перезаписаны.',
-    'backups.deleteConfirm': 'Удалить копию от {date}? Это действие нельзя отменить.',
-    'backups.restoring': 'Восстановление резервной копии...',
-    'backups.restoredLog': 'Восстановление завершено.',
-    'backups.restored': 'Конфигурация успешно восстановлена.',
-    'backups.deleted': 'Резервная копия удалена.',
-    'app.tauriOnly': 'Это приложение должно запускаться внутри Tauri.',
-  },
+const state = {
+  settings: null,
+  wtfRoot: '',
+  accounts: [],
+  allChars: [],   // lista cruda de CharacterInfo (incluye has_activity)
+  charMap: {}, // "acc / realm / char" -> path (ya filtrado según hideEmptyChars)
+  panels: {},  // "kind_scope" -> {srcSelect, checks:{name:input}, listEl, searchEl, render}
+  addonExclListEl: null,
+  addonExclSearchEl: null,
+  addonExclNames: [],
+  addonOnlyListEl: null,
+  addonOnlySearchEl: null,
+  configExclListEl: null,
+  scopeChecks: {},
+  templatesColEl: null,
+  logLines: [],
+  backupChecks: {},
 };
+
+// ================================================================ i18n
+function lang() {
+  return (state.settings && state.settings.lang) || 'es';
+}
+
+function t(key, vars) {
+  const dict = window.I18N[lang()] || window.I18N.es;
+  let s = dict[key] ?? window.I18N.es[key] ?? key;
+  if (vars) {
+    for (const [k, v] of Object.entries(vars)) s = s.split('{' + k + '}').join(v);
+  }
+  return s;
+}
+
+function kindLabel(kind) {
+  return t('kind.' + kind);
+}
+
+function scopeLabel(kind, scope) {
+  return `${t('kind.' + kind)} - ${t('scope.' + scope)}`;
+}
+
+function configFileLabel(fname) {
+  const map = {
+    'config-cache.wtf': t('configFile.general'),
+    'macros-cache.txt': t('configFile.macros'),
+    'layout-cache.txt': t('configFile.layout'),
+    'addons.txt': t('configFile.addonList'),
+    'chat.wtf': t('configFile.chat'),
+  };
+  return map[fname] || fname;
+}
+
+// ================================================================ helpers
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') node.className = v;
+    else if (k === 'text') node.textContent = v;
+    else node.setAttribute(k, v);
+  }
+  for (const c of children.flat()) {
+    if (typeof c === 'string') node.appendChild(document.createTextNode(c));
+    else if (c) node.appendChild(c);
+  }
+  return node;
+}
+
+function btn(text, cls = '', onClick) {
+  const b = el('button', { class: 'btn' + (cls ? ' ' + cls : ''), text });
+  b.onclick = onClick;
+  return b;
+}
+
+function invoke(cmd, args) {
+  return window.__TAURI__.core.invoke(cmd, args);
+}
+
+function saveSettings() {
+  invoke('save_settings', { settingsData: state.settings }).catch((e) => console.error(e));
+}
+
+let snackTimer;
+function snack(msg, ok = false) {
+  const sb = document.getElementById('snackbar');
+  sb.textContent = msg;
+  sb.classList.remove('hidden');
+  if (ok) sb.classList.add('ok');
+  else sb.classList.remove('ok');
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(() => sb.classList.add('hidden'), 3500);
+}
+
+function logClass(s) {
+  s = s.trim();
+  if (/ERROR/i.test(s)) return 'log-error';
+  if (/^==.*==$/.test(s)) return 'log-head';
+  if (/^  /.test(s)) return 'log-dim';
+  return '';
+}
+
+function log(text, forcedCls = '') {
+  const lv = document.getElementById('logView');
+  for (const part of String(text).split('\n')) {
+    if (!part.trim()) continue;
+    state.logLines.push(part);
+    const cls = forcedCls || logClass(part);
+    lv.appendChild(el('div', { class: 'log-line' + (cls ? ' ' + cls : ''), text: part }));
+    lv.scrollTop = lv.scrollHeight;
+  }
+}
+
+function confirm(msg, onYes) {
+  const ov = document.getElementById('confirmOverlay');
+  document.getElementById('confirmText').textContent = msg;
+  ov.classList.remove('hidden');
+  document.getElementById('confirmYes').onclick = () => {
+    ov.classList.add('hidden');
+    onYes();
+  };
+  document.getElementById('confirmNo').onclick = () => ov.classList.add('hidden');
+}
+
+function openHistory() {
+  document.getElementById('historyOverlay').classList.remove('hidden');
+}
+
+// ================================================================ idioma
+function applyLang() {
+  document.documentElement.lang = lang();
+  document.querySelectorAll('[data-i18n]').forEach((n) => {
+    n.textContent = t(n.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((n) => {
+    n.placeholder = t(n.getAttribute('data-i18n-placeholder'));
+  });
+  const langNames = { es: 'Español', en: 'English', ru: 'Русский' };
+  document.querySelectorAll('.lang-btn').forEach((b) => {
+    b.classList.toggle('active', b.dataset.lang === lang());
+    b.title = langNames[b.dataset.lang] || b.dataset.lang;
+  });
+  rebuildTabs();
+}
+
+function setLang(newLang) {
+  if (!window.I18N[newLang] || newLang === lang()) return;
+  state.settings.lang = newLang;
+  saveSettings();
+  applyLang();
+}
+
+function rebuildTabs() {
+  const host = document.getElementById('mainTabs');
+  host.textContent = '';
+  host.appendChild(buildMainTabs());
+  for (const key of Object.keys(state.panels)) {
+    const [kind, scope] = key.split('_');
+    refreshPanel(kind, scope);
+  }
+  refreshTemplates();
+  refreshAddonExcludes();
+}
+
+// ================================================================ progreso
+let progressDone = 0;
+let progressTotal = 0;
+let progressUnlisten = null;
+
+function setProgressFill(frac) {
+  const fill = document.getElementById('progressFill');
+  fill.style.width = Math.round(Math.min(1, Math.max(0, frac)) * 100) + '%';
+}
+
+async function startProgress(total, title, indeterminate = false) {
+  progressDone = 0;
+  progressTotal = Math.max(total, 1);
+  const fill = document.getElementById('progressFill');
+  fill.classList.toggle('indeterminate', indeterminate);
+  document.getElementById('progressTitle').textContent = title;
+  document.getElementById('progressText').textContent = t('progress.preparing');
+  setProgressFill(0);
+  document.getElementById('progressOverlay').classList.remove('hidden');
+  if (!progressUnlisten) {
+    try {
+      progressUnlisten = await window.__TAURI__.event.listen('sync-progress', (e) => {
+        const { done, current } = e.payload;
+        if (done > 0) progressDone = Math.min(progressDone + 1, progressTotal);
+        setProgressFill(progressDone / progressTotal);
+        if (current) document.getElementById('progressText').textContent = t('progress.copyingTo', { dst: current });
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+}
+
+function finishProgress(ok, msg) {
+  if (progressUnlisten) {
+    progressUnlisten();
+    progressUnlisten = null;
+  }
+  const fill = document.getElementById('progressFill');
+  fill.classList.remove('indeterminate');
+  document.getElementById('progressOverlay').classList.add('hidden');
+  setProgressFill(0);
+  if (ok) {
+    document.getElementById('successText').textContent = msg;
+    document.getElementById('successOverlay').classList.remove('hidden');
+  }
+}
+
+// ================================================================ backups
+async function refreshBackups() {
+  const list = document.getElementById('backupsList');
+  list.textContent = '';
+  state.backupChecks = {};
+  let backups = [];
+  try {
+    backups = await invoke('get_backups');
+  } catch (e) {
+    list.appendChild(el('div', { class: 'empty-hint', text: t('backups.readError', { err: e }) }));
+    return;
+  }
+  if (!backups.length) {
+    list.appendChild(el('div', { class: 'empty-hint', text: t('backups.noBackups') }));
+    return;
+  }
+  for (const b of backups) {
+    const date = new Date(Number(b.ts)).toLocaleString(lang());
+    const detail = b.accounts.length
+      ? t('backups.accounts', { list: b.accounts.join(', '), files: b.files })
+      : t('backups.files', { files: b.files });
+    const checkInput = el('input', { type: 'checkbox' });
+    state.backupChecks[b.path] = checkInput;
+    const restoreBtn = btn(t('backups.restore'), 'small', () => {
+      confirm(t('backups.restoreConfirm', { date }), () => doRestore(b));
+    });
+    const delBtn = btn(t('backups.delete'), 'small outline', () => {
+      confirm(t('backups.deleteConfirm', { date }), () => doDelete(b));
+    });
+    list.appendChild(
+      el(
+        'div',
+        { class: 'backup-card' },
+        checkInput,
+        el(
+          'div',
+          { class: 'backup-info' },
+          el('div', { class: 'backup-name', text: date }),
+          el('div', { class: 'backup-detail', text: detail })
+        ),
+        el('div', { class: 'backup-actions' }, restoreBtn, delBtn)
+      )
+    );
+  }
+}
+
+function selectAllBackups() {
+  for (const cb of Object.values(state.backupChecks || {})) cb.checked = true;
+}
+
+function selectNoneBackups() {
+  for (const cb of Object.values(state.backupChecks || {})) cb.checked = false;
+}
+
+async function deleteBackupPaths(paths) {
+  let ok = 0;
+  let failed = 0;
+  for (const p of paths) {
+    try {
+      await invoke('delete_backup', { backupPath: p });
+      ok++;
+    } catch (e) {
+      failed++;
+      log('ERROR: ' + e);
+    }
+  }
+  await refreshBackups();
+  if (failed) snack(t('backups.deletedBulkErrors', { ok, failed }));
+  else snack(t('backups.deletedBulk', { count: ok }), true);
+}
+
+function doDeleteSelected() {
+  const paths = Object.entries(state.backupChecks || {})
+    .filter(([, cb]) => cb.checked)
+    .map(([p]) => p);
+  if (!paths.length) {
+    snack(t('backups.noneSelected'));
+    return;
+  }
+  confirm(t('backups.deleteSelectedConfirm', { count: paths.length }), () => deleteBackupPaths(paths));
+}
+
+async function openBackupsFolder() {
+  try {
+    await invoke('open_backups_folder');
+  } catch (e) {
+    snack(t('common.error', { err: e }));
+  }
+}
+
+async function doRestore(b) {
+  if (!state.wtfRoot) {
+    snack(t('wtf.loadFirst'));
+    return;
+  }
+  await startProgress(1, t('backups.restoring'), true);
+  try {
+    const lines = await invoke('restore_backup', { backupPath: b.path, wtfRoot: state.wtfRoot });
+    lines.forEach((l) => log(l));
+    log(t('backups.restoredLog'), 'log-ok');
+    finishProgress(true, t('backups.restored'));
+  } catch (e) {
+    log('ERROR: ' + e);
+    snack(t('common.error', { err: e }));
+    finishProgress(false);
+  }
+}
+
+async function doDelete(b) {
+  try {
+    await invoke('delete_backup', { backupPath: b.path });
+    snack(t('backups.deleted'), true);
+    await refreshBackups();
+  } catch (e) {
+    snack(t('common.error', { err: e }));
+  }
+}
+
+function makeTabs(items) {
+  const bar = el('div', { class: 'tabbar' });
+  const view = el('div', { class: 'tabview' });
+  const buttons = [];
+  items.forEach((it, i) => {
+    const b = el('button', { class: 'tab', text: it.label });
+    b.onclick = () => setActive(i);
+    bar.appendChild(b);
+    buttons.push(b);
+    const pane = el('div', { class: 'tabview-pane' });
+    pane.appendChild(it.element);
+    view.appendChild(pane);
+    it._pane = pane;
+  });
+  function setActive(i) {
+    buttons.forEach((b, j) => b.classList.toggle('active', j === i));
+    items.forEach((it, j) => (it._pane.style.display = j === i ? '' : 'none'));
+  }
+  setActive(0);
+  return el('div', { class: 'tabs-wrap', style: 'display:flex;flex-direction:column;flex:1;min-height:0' }, bar, view);
+}
+
+// ============================================================== paneles de scope
+function buildScopePanel(kind, scope) {
+  const title = t('scope.' + scope);
+  const dstLabel = scope === 'account' ? t('scope.accountDst') : t('scope.characterDst');
+
+  const srcSelect = el('select');
+  const searchEl =
+    scope === 'character'
+      ? el('input', { type: 'text', class: 'search', placeholder: t('search.placeholder') })
+      : null;
+
+  const listEl = el('div', { class: 'checklist' });
+  const box = el('div', { class: 'checklist-box' }, listEl);
+  const checks = {};
+
+  function items() {
+    return scope === 'account' ? state.accounts : Object.keys(state.charMap);
+  }
+  function filtered() {
+    const q = (searchEl?.value || '').trim().toLowerCase();
+    return Object.keys(checks).filter((n) => (q ? n.toLowerCase().includes(q) : true));
+  }
+  function render() {
+    listEl.textContent = '';
+    const names = filtered();
+    for (const n of names) {
+      const input = checks[n];
+      const label = el('label', { class: 'check' }, input, el('span', { class: 'name', text: n }));
+      listEl.appendChild(label);
+    }
+    if (!names.length) listEl.appendChild(el('div', { class: 'empty-hint', text: t('list.empty') }));
+  }
+
+  const selectAllBtn = btn(t('scope.selectAll'), 'outline small', () => {
+    const q = (searchEl?.value || '').trim().toLowerCase();
+    for (const n of Object.keys(checks)) if (!q || n.toLowerCase().includes(q)) checks[n].checked = true;
+  });
+  const selectNoneBtn = btn(t('scope.selectNone'), 'outline small', () => {
+    for (const n of Object.keys(checks)) checks[n].checked = false;
+  });
+
+  const runBtn = btn(t('scope.runBtn', { scope: title.toLowerCase() }), 'run', () => {
+    const src = srcSelect.value;
+    const dsts = Object.keys(checks).filter((n) => checks[n].checked && n !== src);
+    if (!src || !dsts.length) {
+      snack(t('scope.noSelection'));
+      return;
+    }
+    confirm(t('scope.overwrite', { dsts: dsts.join(', ') }), () => doRun(src, dsts));
+  });
+
+  async function doRun(src, dsts) {
+    await startProgress(dsts.length, t('scope.sending', { kind: kindLabel(kind) }));
+    try {
+      const lines = await invoke('run_sync', {
+        jobType: kind, scope, wtfRoot: state.wtfRoot, src, dsts, settingsData: state.settings,
+      });
+      lines.forEach((l) => log(l));
+      log(t('common.done'), 'log-ok');
+      finishProgress(true, t('scope.applied', { kind: kindLabel(kind) }));
+    } catch (e) {
+      log('ERROR: ' + e);
+      snack(t('common.error', { err: e }));
+      finishProgress(false);
+    }
+  }
+
+  const panelEl = el(
+    'div',
+    { class: 'panel scope-panel' },
+    el(
+      'div',
+      { class: 'scope-head' },
+      el(
+        'div',
+        { class: 'row' },
+        el('div', { class: 'field-label', text: t('scope.sourceLabel', { kind: kindLabel(kind) }) }),
+        srcSelect,
+        searchEl
+      ),
+      el('div', { class: 'scope-head-right' }, selectAllBtn, selectNoneBtn)
+    ),
+    el('div', { class: 'field-label', text: dstLabel }),
+    box,
+    runBtn
+  );
+
+  srcSelect.onchange = () => {
+    state.settings.src[`${kind}_${scope}`] = srcSelect.value;
+    saveSettings();
+  };
+  if (searchEl) searchEl.oninput = render;
+
+  state.panels[`${kind}_${scope}`] = { srcSelect, checks, listEl, searchEl, render };
+  return panelEl;
+}
+
+function refreshPanel(kind, scope) {
+  const p = state.panels[`${kind}_${scope}`];
+  if (!p) return;
+  const items = scope === 'account' ? state.accounts : Object.keys(state.charMap);
+  p.srcSelect.textContent = '';
+  for (const it of items) p.srcSelect.appendChild(el('option', { value: it, text: it }));
+  const saved = state.settings.src[`${kind}_${scope}`];
+  p.srcSelect.value = saved && items.includes(saved) ? saved : items[0] || '';
+  for (const k of Object.keys(p.checks)) delete p.checks[k];
+  for (const it of items) {
+    const cb = el(
+      'label',
+      { class: 'check' },
+      el('input', { type: 'checkbox' }),
+      el('span', { class: 'name', text: it })
+    );
+    p.checks[it] = cb.querySelector('input');
+  }
+  if (p.searchEl) p.searchEl.value = '';
+  p.render();
+}
+
+// ================================================================ exclusiones
+function buildAddonExclPanel() {
+  const listEl = el('div', { class: 'checklist' });
+  const box = el('div', { class: 'checklist-box' }, listEl);
+  const searchEl = el('input', { type: 'text', class: 'search excl-search', placeholder: t('addons.exclSearch') });
+  searchEl.oninput = renderAddonExcludes;
+  state.addonExclListEl = listEl;
+  state.addonExclSearchEl = searchEl;
+  return el(
+    'div',
+    { class: 'panel scope-panel' },
+    el('div', { class: 'field-label', text: t('addons.exclTitle') }),
+    el('div', { class: 'note-text', text: t('addons.exclNote') }),
+    searchEl,
+    box
+  );
+}
+
+async function refreshAddonExcludes() {
+  state.addonExclNames = [];
+  if (state.wtfRoot) {
+    try {
+      state.addonExclNames = await invoke('scan_all_addons', { wtfRoot: state.wtfRoot });
+    } catch (e) {
+      /* ignore */
+    }
+  }
+  renderAddonExcludes();
+  renderAddonOnly();
+}
+
+function renderAddonExcludes() {
+  const listEl = state.addonExclListEl;
+  if (!listEl) return;
+  listEl.textContent = '';
+  const q = (state.addonExclSearchEl?.value || '').trim().toLowerCase();
+  const names = state.addonExclNames.filter((n) => (q ? n.toLowerCase().includes(q) : true));
+  for (const name of names) {
+    const cb = el(
+      'label',
+      { class: 'check excl' },
+      el('input', { type: 'checkbox' }),
+      el('span', { class: 'name', text: name })
+    );
+    const input = cb.querySelector('input');
+    input.checked = state.settings.addon_excludes.includes(name);
+    input.onchange = () => {
+      if (input.checked) {
+        if (!state.settings.addon_excludes.includes(name)) state.settings.addon_excludes.push(name);
+      } else {
+        state.settings.addon_excludes = state.settings.addon_excludes.filter((x) => x !== name);
+      }
+      saveSettings();
+    };
+    listEl.appendChild(cb);
+  }
+  if (!names.length)
+    listEl.appendChild(el('div', { class: 'empty-hint', text: t('addons.exclEmpty') }));
+}
+
+function buildAddonOnlyPanel() {
+  const listEl = el('div', { class: 'checklist' });
+  const box = el('div', { class: 'checklist-box' }, listEl);
+  const searchEl = el('input', { type: 'text', class: 'search excl-search', placeholder: t('addons.exclSearch') });
+  searchEl.oninput = renderAddonOnly;
+  state.addonOnlyListEl = listEl;
+  state.addonOnlySearchEl = searchEl;
+  return el(
+    'div',
+    { class: 'panel scope-panel' },
+    el('div', { class: 'field-label', text: t('addons.onlyTitle') }),
+    el('div', { class: 'note-text', text: t('addons.onlyNote') }),
+    searchEl,
+    box
+  );
+}
+
+function renderAddonOnly() {
+  const listEl = state.addonOnlyListEl;
+  if (!listEl) return;
+  listEl.textContent = '';
+  const q = (state.addonOnlySearchEl?.value || '').trim().toLowerCase();
+  const names = state.addonExclNames.filter((n) => (q ? n.toLowerCase().includes(q) : true));
+  for (const name of names) {
+    const cb = el(
+      'label',
+      { class: 'check' },
+      el('input', { type: 'checkbox' }),
+      el('span', { class: 'name', text: name })
+    );
+    const input = cb.querySelector('input');
+    input.checked = state.settings.addon_only.includes(name);
+    input.onchange = () => {
+      if (input.checked) {
+        if (!state.settings.addon_only.includes(name)) state.settings.addon_only.push(name);
+      } else {
+        state.settings.addon_only = state.settings.addon_only.filter((x) => x !== name);
+      }
+      saveSettings();
+    };
+    listEl.appendChild(cb);
+  }
+  if (!names.length)
+    listEl.appendChild(el('div', { class: 'empty-hint', text: t('addons.exclEmpty') }));
+}
+
+function buildConfigExclPanel() {
+  const listEl = el('div', { class: 'checklist' });
+  const box = el('div', { class: 'checklist-box' }, listEl);
+  state.configExclListEl = listEl;
+  renderConfigExcludes();
+  return el(
+    'div',
+    { class: 'panel scope-panel' },
+    el('div', { class: 'field-label', text: t('configs.exclTitle') }),
+    el('div', { class: 'note-text', text: t('configs.exclNote') }),
+    box
+  );
+}
+
+function renderConfigExcludes() {
+  const listEl = state.configExclListEl;
+  if (!listEl) return;
+  listEl.textContent = '';
+  const seen = new Set();
+  const all = [...ACCOUNT_CONFIG_FILES, ...CHARACTER_CONFIG_FILES].filter(([fname]) => {
+    if (seen.has(fname)) return false;
+    seen.add(fname);
+    return true;
+  });
+  for (const [fname] of all) {
+    const cb = el(
+      'label',
+      { class: 'check excl' },
+      el('input', { type: 'checkbox' }),
+      el('span', { class: 'name', text: `${configFileLabel(fname)}  (${fname})` })
+    );
+    const input = cb.querySelector('input');
+    input.checked = state.settings.config_excludes.includes(fname);
+    input.onchange = () => {
+      if (input.checked) {
+        if (!state.settings.config_excludes.includes(fname)) state.settings.config_excludes.push(fname);
+      } else {
+        state.settings.config_excludes = state.settings.config_excludes.filter((x) => x !== fname);
+      }
+      saveSettings();
+    };
+    listEl.appendChild(cb);
+  }
+}
+
+function buildBindingsNote() {
+  return el(
+    'div',
+    { class: 'panel' },
+    el('div', { class: 'note-text', text: t('bindings.note') })
+  );
+}
+
+// ================================================================ plantillas
+function buildTemplatesTab() {
+  const scopeChecksRow = el('div', { class: 'scope-checks-row' });
+
+  function makeScopeColumn(scope, heading) {
+    const col = el('div', { class: 'scope-checks-col' }, el('div', { class: 'heading', text: heading }));
+    for (const kind of KINDS) {
+      const cb = el(
+        'label',
+        { class: 'check' },
+        el('input', { type: 'checkbox' }),
+        el('span', { class: 'name', text: kindLabel(kind) })
+      );
+      const input = cb.querySelector('input');
+      state.scopeChecks[`${kind}_${scope}`] = input;
+      col.appendChild(cb);
+    }
+    return col;
+  }
+
+  scopeChecksRow.appendChild(
+    el(
+      'div',
+      { class: 'row' },
+      makeScopeColumn('account', t('scope.account')),
+      el('div', { class: 'v-divider' }),
+      makeScopeColumn('character', t('scope.character'))
+    )
+  );
+
+  const nameField = el('input', { type: 'text', placeholder: t('templates.namePlaceholder'), style: 'width:300px' });
+
+  const backupCheck = el(
+    'label',
+    { class: 'check' },
+    el('input', { type: 'checkbox' }),
+    el('span', { class: 'name', text: t('templates.backupToggle') })
+  );
+  const backupInput = backupCheck.querySelector('input');
+  backupInput.checked = !!state.settings.backup_enabled;
+  backupInput.onchange = () => {
+    state.settings.backup_enabled = backupInput.checked;
+    saveSettings();
+  };
+
+  function saveTemplate() {
+    const name = nameField.value.trim();
+    if (!name) {
+      snack(t('templates.noName'));
+      return;
+    }
+    const selected = Object.keys(state.scopeChecks).filter((k) => state.scopeChecks[k].checked);
+    if (!selected.length) {
+      snack(t('templates.noSection'));
+      return;
+    }
+    const { jobs, missing } = collectCurrentJobs(selected);
+    if (!jobs.length) {
+      snack(t('templates.noJobs'));
+      return;
+    }
+    state.settings.templates = state.settings.templates.filter((x) => x.name !== name);
+    state.settings.templates.push({
+      name,
+      jobs,
+      excludes: {
+        addon_excludes: [...state.settings.addon_excludes],
+        addon_only: [...state.settings.addon_only],
+        config_excludes: [...state.settings.config_excludes],
+      },
+    });
+    saveSettings();
+    nameField.value = '';
+    refreshTemplates();
+    let msg = t('templates.saved', { name });
+    if (missing.length) msg += t('templates.missing', { list: missing.join(', ') });
+    snack(msg, true);
+  }
+
+  const left = el(
+    'div',
+    { class: 'templates-left' },
+    el(
+      'div',
+      { class: 'panel scope-panel' },
+      el('div', { class: 'field-label', text: t('templates.saveTitle'), style: 'font-size:14px;font-weight:700' }),
+      el('div', { class: 'note-text', text: t('templates.saveNote') }),
+      el('div', { class: 'checklist-box', style: 'height:auto;min-height:190px' }, scopeChecksRow),
+      el('div', { class: 'row' }, nameField, btn(t('templates.saveBtn'), '', saveTemplate)),
+      el('div', { class: 'row' }, backupCheck),
+      el('div', { class: 'note-text', text: t('templates.backupNote') })
+    )
+  );
+
+  const templatesCol = el('div', { class: 'templates-col' });
+  state.templatesColEl = templatesCol;
+  const right = el(
+    'div',
+    { class: 'templates-right' },
+    el('div', { class: 'field-label', text: t('templates.savedTitle'), style: 'color:var(--gold);font-size:15px;font-weight:700' }),
+    templatesCol
+  );
+
+  return el('div', { class: 'templates-tab' }, left, right);
+}
+
+function collectCurrentJobs(selectedScopes) {
+  const jobs = [];
+  const missing = [];
+  for (const key of selectedScopes) {
+    const p = state.panels[key];
+    if (!p) continue;
+    const [kind, scope] = key.split('_');
+    const src = p.srcSelect.value;
+    const dsts = Object.keys(p.checks).filter((n) => p.checks[n].checked && n !== src);
+    if (src && dsts.length) jobs.push({ type: kind, scope, src, dsts });
+    else missing.push(scopeLabel(kind, scope));
+  }
+  return { jobs, missing };
+}
+
+function applyTemplateExcludes(tpl) {
+  if (!tpl.excludes) return;
+  state.settings.addon_excludes = [...(tpl.excludes.addon_excludes || [])];
+  state.settings.addon_only = [...(tpl.excludes.addon_only || [])];
+  state.settings.config_excludes = [...(tpl.excludes.config_excludes || [])];
+  saveSettings();
+  renderAddonExcludes();
+  renderAddonOnly();
+  renderConfigExcludes();
+}
+
+function applyJobs(jobs) {
+  if (!state.wtfRoot) {
+    snack(t('wtf.loadFirst'));
+    return false;
+  }
+  for (const key of Object.keys(state.panels)) {
+    const p = state.panels[key];
+    const pJobs = jobs.filter((j) => `${j.type}_${j.scope}` === key);
+    if (pJobs.length) {
+      const j = pJobs[0];
+      const options = Array.from(p.srcSelect.options).map((o) => o.value);
+      if (options.includes(j.src)) p.srcSelect.value = j.src;
+      for (const n of Object.keys(p.checks)) p.checks[n].checked = j.dsts.includes(n);
+    } else {
+      for (const n of Object.keys(p.checks)) p.checks[n].checked = false;
+    }
+    if (p.searchEl) p.searchEl.value = '';
+    p.render();
+  }
+  return true;
+}
+
+async function runJobs(jobs) {
+  const total = jobs.reduce((n, j) => n + j.dsts.length, 0);
+  if (!total) {
+    snack(t('jobs.noDests'));
+    return;
+  }
+  await startProgress(total, t('jobs.applying', { count: jobs.length }));
+  let hadError = false;
+  try {
+    for (const j of jobs) {
+      try {
+        const lines = await invoke('run_sync', {
+          jobType: j.type, scope: j.scope, wtfRoot: state.wtfRoot, src: j.src, dsts: j.dsts, settingsData: state.settings,
+        });
+        lines.forEach((l) => log(l));
+      } catch (e) {
+        hadError = true;
+        log('ERROR: ' + e);
+      }
+    }
+    log(t('jobs.done'), 'log-ok');
+    finishProgress(true, hadError ? t('jobs.withErrors') : t('jobs.ok'));
+  } catch (e) {
+    hadError = true;
+    log('ERROR: ' + e);
+    finishProgress(false);
+  }
+}
+
+function refreshTemplates() {
+  const col = state.templatesColEl;
+  if (!col) return;
+  col.textContent = '';
+  for (const tpl of state.settings.templates) {
+    const included = tpl.jobs
+      .map((j) => scopeLabel(j.type, j.scope))
+      .join(', ');
+    const applyBtn = btn(t('templates.apply'), 'outline small', () => {
+      if (applyJobs(tpl.jobs)) {
+        applyTemplateExcludes(tpl);
+        snack(t('templates.applied', { name: tpl.name }), true);
+      }
+    });
+    const applyRunBtn = btn(t('templates.applyRun'), 'small', () => {
+      if (applyJobs(tpl.jobs)) {
+        applyTemplateExcludes(tpl);
+        runJobs(tpl.jobs);
+      }
+    });
+    const delBtn = el('button', { class: 'icon-btn', text: '\u2715' });
+    delBtn.title = t('templates.delete');
+    delBtn.onclick = () => {
+      state.settings.templates = state.settings.templates.filter((x) => x.name !== tpl.name);
+      saveSettings();
+      refreshTemplates();
+    };
+    col.appendChild(
+      el(
+        'div',
+        { class: 'tpl-card' },
+        el(
+          'div',
+          { class: 'tpl-head' },
+          el('div', { class: 'tpl-name', text: tpl.name }),
+          el('div', { class: 'tpl-btns' }, applyBtn, applyRunBtn, delBtn)
+        ),
+        el('div', { class: 'tpl-included', text: included || t('templates.noSections') })
+      )
+    );
+  }
+  if (!state.settings.templates.length)
+    col.appendChild(el('div', { class: 'empty-hint', text: t('templates.empty') }));
+}
+
+// ================================================================ tabs
+function buildKindTab(kind) {
+  const items = [
+    { label: t('scope.account'), element: buildScopePanel(kind, 'account') },
+    { label: t('scope.character'), element: buildScopePanel(kind, 'character') },
+  ];
+  if (kind === 'addons') {
+    items.push({ label: t('tabs.only'), element: buildAddonOnlyPanel() });
+    items.push({ label: t('tabs.exclusions'), element: buildAddonExclPanel() });
+  } else if (kind === 'configs') {
+    items.push({ label: t('tabs.exclusions'), element: buildConfigExclPanel() });
+  } else {
+    items.push({ label: t('tabs.exclusions'), element: buildBindingsNote() });
+  }
+  return makeTabs(items);
+}
+
+function buildMainTabs() {
+  return makeTabs([
+    { label: t('tabs.templates'), element: buildTemplatesTab() },
+    { label: kindLabel('addons'), element: buildKindTab('addons') },
+    { label: kindLabel('configs'), element: buildKindTab('configs') },
+    { label: kindLabel('bindings'), element: buildKindTab('bindings') },
+  ]);
+}
+
+// ================================================================ WTF
+async function doReload() {
+  const root = document.getElementById('wtfField').value.trim();
+  if (!root) {
+    snack(t('wtf.invalid'));
+    return;
+  }
+  let valid = false;
+  try {
+    valid = await invoke('is_dir', { path: root });
+  } catch (e) {
+    /* ignore */
+  }
+  if (!valid) {
+    snack(t('wtf.invalid'));
+    return;
+  }
+  const accounts = await invoke('list_accounts', { wtfRoot: root });
+  const chars = await invoke('list_characters', { wtfRoot: root });
+  state.wtfRoot = root;
+  state.accounts = accounts;
+  state.allChars = chars;
+  rebuildCharMap();
+  state.settings.wtf_root = root;
+  saveSettings();
+  for (const key of Object.keys(state.panels)) {
+    const [kind, scope] = key.split('_');
+    refreshPanel(kind, scope);
+  }
+  await refreshAddonExcludes();
+  log(t('wtf.loaded', { accounts: accounts.length, chars: chars.length }));
+}
+
+function rebuildCharMap() {
+  state.charMap = {};
+  for (const c of state.allChars) {
+    if (state.settings.hide_empty_characters && !c.has_activity) continue;
+    state.charMap[c.key] = c.path;
+  }
+}
+
+async function browse() {
+  try {
+    const path = await window.__TAURI__.dialog.open({ directory: true, title: t('wtf.browseTitle') });
+    if (path) {
+      document.getElementById('wtfField').value = path;
+      await doReload();
+    }
+  } catch (e) {
+    /* cancelado */
+  }
+}
+
+// ================================================================ init
+async function init() {
+  if (!window.__TAURI__) {
+    document.body.textContent = t('app.tauriOnly');
+    return;
+  }
+
+  state.settings = {
+    wtf_root: '',
+    src: {},
+    addon_excludes: [],
+    addon_only: [],
+    config_excludes: [],
+    templates: [],
+    backup_enabled: true,
+    lang: 'es',
+    hide_empty_characters: false,
+  };
+  try {
+    const loaded = await invoke('get_settings');
+    if (loaded && typeof loaded === 'object') {
+      state.settings = loaded;
+      if (state.settings.backup_enabled === undefined) state.settings.backup_enabled = true;
+      if (!state.settings.lang || !window.I18N[state.settings.lang]) state.settings.lang = 'es';
+      if (!Array.isArray(state.settings.addon_only)) state.settings.addon_only = [];
+      if (state.settings.hide_empty_characters === undefined) state.settings.hide_empty_characters = false;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  document.getElementById('browseBtn').onclick = browse;
+  document.getElementById('loadBtn').onclick = () => doReload();
+  document.getElementById('historyBtn').onclick = openHistory;
+  document.getElementById('historyClose').onclick = () =>
+    document.getElementById('historyOverlay').classList.add('hidden');
+  document.getElementById('successOk').onclick = () =>
+    document.getElementById('successOverlay').classList.add('hidden');
+
+  document.getElementById('backupsBtn').onclick = async () => {
+    document.getElementById('backupsOverlay').classList.remove('hidden');
+    await refreshBackups();
+  };
+  document.getElementById('backupsClose').onclick = () =>
+    document.getElementById('backupsOverlay').classList.add('hidden');
+  document.getElementById('backupsOpenFolder').onclick = openBackupsFolder;
+  document.getElementById('backupsSelectAll').onclick = selectAllBackups;
+  document.getElementById('backupsSelectNone').onclick = selectNoneBackups;
+  document.getElementById('backupsDeleteSelected').onclick = doDeleteSelected;
+
+  document.querySelectorAll('.lang-btn').forEach((b) => {
+    b.onclick = () => setLang(b.dataset.lang);
+  });
+
+  const hideEmptyChk = document.getElementById('hideEmptyChars');
+  hideEmptyChk.checked = !!state.settings.hide_empty_characters;
+  hideEmptyChk.onchange = () => {
+    state.settings.hide_empty_characters = hideEmptyChk.checked;
+    saveSettings();
+    rebuildCharMap();
+    for (const key of Object.keys(state.panels)) {
+      const [kind, scope] = key.split('_');
+      if (scope === 'character') refreshPanel(kind, scope);
+    }
+  };
+
+  document.getElementById('wtfField').value = state.settings.wtf_root || '';
+  applyLang();
+  if (state.settings.wtf_root) await doReload();
+}
+
+init();
