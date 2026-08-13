@@ -28,6 +28,7 @@ const state = {
   scopeChecks: {},
   templatesColEl: null,
   logLines: [],
+  backupChecks: {},
 };
 
 // ================================================================ i18n
@@ -224,6 +225,7 @@ function finishProgress(ok, msg) {
 async function refreshBackups() {
   const list = document.getElementById('backupsList');
   list.textContent = '';
+  state.backupChecks = {};
   let backups = [];
   try {
     backups = await invoke('get_backups');
@@ -240,6 +242,8 @@ async function refreshBackups() {
     const detail = b.accounts.length
       ? t('backups.accounts', { list: b.accounts.join(', '), files: b.files })
       : t('backups.files', { files: b.files });
+    const checkInput = el('input', { type: 'checkbox' });
+    state.backupChecks[b.path] = checkInput;
     const restoreBtn = btn(t('backups.restore'), 'small', () => {
       confirm(t('backups.restoreConfirm', { date }), () => doRestore(b));
     });
@@ -250,6 +254,7 @@ async function refreshBackups() {
       el(
         'div',
         { class: 'backup-card' },
+        checkInput,
         el(
           'div',
           { class: 'backup-info' },
@@ -259,6 +264,50 @@ async function refreshBackups() {
         el('div', { class: 'backup-actions' }, restoreBtn, delBtn)
       )
     );
+  }
+}
+
+function selectAllBackups() {
+  for (const cb of Object.values(state.backupChecks || {})) cb.checked = true;
+}
+
+function selectNoneBackups() {
+  for (const cb of Object.values(state.backupChecks || {})) cb.checked = false;
+}
+
+async function deleteBackupPaths(paths) {
+  let ok = 0;
+  let failed = 0;
+  for (const p of paths) {
+    try {
+      await invoke('delete_backup', { backupPath: p });
+      ok++;
+    } catch (e) {
+      failed++;
+      log('ERROR: ' + e);
+    }
+  }
+  await refreshBackups();
+  if (failed) snack(t('backups.deletedBulkErrors', { ok, failed }));
+  else snack(t('backups.deletedBulk', { count: ok }), true);
+}
+
+function doDeleteSelected() {
+  const paths = Object.entries(state.backupChecks || {})
+    .filter(([, cb]) => cb.checked)
+    .map(([p]) => p);
+  if (!paths.length) {
+    snack(t('backups.noneSelected'));
+    return;
+  }
+  confirm(t('backups.deleteSelectedConfirm', { count: paths.length }), () => deleteBackupPaths(paths));
+}
+
+async function openBackupsFolder() {
+  try {
+    await invoke('open_backups_folder');
+  } catch (e) {
+    snack(t('common.error', { err: e }));
   }
 }
 
@@ -937,6 +986,10 @@ async function init() {
   };
   document.getElementById('backupsClose').onclick = () =>
     document.getElementById('backupsOverlay').classList.add('hidden');
+  document.getElementById('backupsOpenFolder').onclick = openBackupsFolder;
+  document.getElementById('backupsSelectAll').onclick = selectAllBackups;
+  document.getElementById('backupsSelectNone').onclick = selectNoneBackups;
+  document.getElementById('backupsDeleteSelected').onclick = doDeleteSelected;
 
   document.querySelectorAll('.lang-btn').forEach((b) => {
     b.onclick = () => setLang(b.dataset.lang);
