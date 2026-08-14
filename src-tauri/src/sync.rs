@@ -127,7 +127,7 @@ pub struct CharacterInfo {
 
 /// Un personaje se considera "sin actividad" (nunca se llegó a loguear de
 /// verdad, la carpeta quedó solo por reservar el nombre) si no tiene ningún
-/// SavedVariables, ni config-cache.wtf, ni chat.wtf.
+/// SavedVariables, ni config-cache.wtf, ni chat-cache.wtf.
 fn character_has_activity(char_path: &Path) -> bool {
     let sv = char_path.join("SavedVariables");
     let has_saved_vars = fs::read_dir(&sv)
@@ -135,7 +135,7 @@ fn character_has_activity(char_path: &Path) -> bool {
         .unwrap_or(false);
     has_saved_vars
         || char_path.join("config-cache.wtf").is_file()
-        || char_path.join("chat.wtf").is_file()
+        || char_path.join("chat-cache.wtf").is_file()
 }
 
 pub fn list_characters(wtf_root: &str) -> Vec<CharacterInfo> {
