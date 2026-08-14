@@ -10,7 +10,7 @@ const CHARACTER_CONFIG_FILES = [
   ['macros-cache.txt', 'Macros'],
   ['layout-cache.txt', 'Layout de UI'],
   ['addons.txt', 'Lista de addons activados'],
-  ['chat.wtf', 'Configuración de chat'],
+  ['chat-cache.wtf', 'Configuración de chat'],
 ];
 
 const state = {
@@ -61,6 +61,7 @@ function configFileLabel(fname) {
     'layout-cache.txt': t('configFile.layout'),
     'addons.txt': t('configFile.addonList'),
     'chat.wtf': t('configFile.chat'),
+    'chat-cache.wtf': t('configFile.chat'),
   };
   return map[fname] || fname;
 }
