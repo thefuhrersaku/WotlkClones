@@ -14,7 +14,7 @@ pub const CHARACTER_CONFIG_FILES: [(&str, &str); 5] = [
     ("macros-cache.txt", "Macros"),
     ("layout-cache.txt", "Layout de UI"),
     ("addons.txt", "Lista de addons activados"),
-    ("chat.wtf", "Configuración de chat"),
+    ("chat-cache.wtf", "Configuración de chat"),
 ];
 
 pub const BINDINGS_FILE: &str = "bindings-cache.wtf";
