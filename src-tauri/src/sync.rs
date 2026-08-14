@@ -29,6 +29,10 @@ pub fn clean_junk(dst_dir: &Path, log: &mut Vec<String>) {
 
 pub fn copy_replace(src_file: &Path, dst_dir: &Path, log: &mut Vec<String>) {
     if !src_file.is_file() {
+        log.push(format!(
+            "  omitido (no existe en origen): {}",
+            src_file.display()
+        ));
         return;
     }
     if let Err(err) = fs::create_dir_all(dst_dir) {
@@ -127,7 +131,7 @@ pub struct CharacterInfo {
 
 /// Un personaje se considera "sin actividad" (nunca se llegó a loguear de
 /// verdad, la carpeta quedó solo por reservar el nombre) si no tiene ningún
-/// SavedVariables, ni config-cache.wtf, ni chat-cache.wtf.
+/// SavedVariables, ni config-cache.wtf, ni chat-cache.txt.
 fn character_has_activity(char_path: &Path) -> bool {
     let sv = char_path.join("SavedVariables");
     let has_saved_vars = fs::read_dir(&sv)
@@ -135,7 +139,7 @@ fn character_has_activity(char_path: &Path) -> bool {
         .unwrap_or(false);
     has_saved_vars
         || char_path.join("config-cache.wtf").is_file()
-        || char_path.join("chat-cache.wtf").is_file()
+        || char_path.join("chat-cache.txt").is_file()
 }
 
 pub fn list_characters(wtf_root: &str) -> Vec<CharacterInfo> {
